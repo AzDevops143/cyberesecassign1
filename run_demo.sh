@@ -203,7 +203,7 @@ stage_4() {
     # 3. Detection
     echo -e "${YELLOW}[3. DETECTION STRATEGY: FIM & Audits]${NC}"
     echo -e "  - Configure **File Integrity Monitoring (FIM)** on critical host folders such as ${CYAN}/etc/cron*${NC}."
-    echo -e "  - Implement auditing system rules (`auditd`) to flag container writing tasks matching system configuration directories."
+    echo -e '  - Implement auditing system rules (`auditd`) to flag container writing tasks matching system configuration directories.'
     echo ""
 
     # 4. Mitigation
