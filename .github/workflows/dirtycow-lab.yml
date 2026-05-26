@@ -24,7 +24,18 @@ jobs:
         echo "=== Building the Dirty COW Lab Docker Container ==="
         docker build -t dirtycow-lab .
 
-    - name: Run Lab Demonstration
+    - name: Run Stage 1: Host Kernel Isolation (Dirty COW Exploit)
       run: |
-        echo "=== Running the Dirty COW Lab Demonstration ==="
-        docker run --rm dirtycow-lab
+        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-1
+
+    - name: Run Stage 2: Namespace & Capabilities Isolation
+      run: |
+        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-2
+
+    - name: Run Stage 3: Daemon & API Security (docker.sock Mount)
+      run: |
+        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-3
+
+    - name: Run Stage 4: Volume & Filesystem Security (Path Traversal)
+      run: |
+        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-4
