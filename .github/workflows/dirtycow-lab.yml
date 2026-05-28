@@ -1,41 +1,67 @@
-name: Dirty COW Lab CI Pipeline
+name: Secure Build, Sign, and Run Pipeline
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: # Allows manual execution from the GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
-  build-and-run:
+  build-sign-run:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write      # Required to push image and signature to GHCR
+      id-token: write      # Required for OIDC keyless signing (Sigstore/Cosign)
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    # Step 1: Install Cosign (Sigstore)
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3.5.0
+
+    # Step 2: Log in to GitHub Container Registry (GHCR)
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
       with:
-        token: ${{ secrets.GH_PAT }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build Docker Container
+    # Step 3: Build and Push Docker Image
+    - name: Build and Push Docker Image
+      id: build-and-push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+    # Step 4: Sign the Published Image keylessly
+    - name: Sign the Published Image
+      env:
+        TAGS: ghcr.io/${{ github.repository }}:${{ github.sha }}
       run: |
-        echo "=== Building the Dirty COW Lab Docker Container ==="
-        docker build -t dirtycow-lab .
+        cosign sign --yes "${TAGS}"
 
+    # Step 5: Run your Hexa Force Lab Stages using the Signed Image
     - name: "Run Stage 1: Host Kernel Isolation (Dirty COW Exploit)"
       run: |
-        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-1
+        docker run --rm ghcr.io/${{ github.repository }}:latest /bin/bash run_demo.sh --stage-1
 
     - name: "Run Stage 2: Namespace & Capabilities Isolation"
       run: |
-        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-2
+        docker run --rm ghcr.io/${{ github.repository }}:latest /bin/bash run_demo.sh --stage-2
 
-    - name: "Run Stage 3: Daemon & API Security (docker.sock Mount)"
+    - name: "Run Stage 3: Daemon & API Security"
       run: |
-        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-3
+        docker run --rm ghcr.io/${{ github.repository }}:latest /bin/bash run_demo.sh --stage-3
 
-    - name: "Run Stage 4: Volume & Filesystem Security (Path Traversal)"
+    - name: "Run Stage 4: Volume & Filesystem Security"
       run: |
-        docker run --rm dirtycow-lab /bin/bash run_demo.sh --stage-4
+        docker run --rm ghcr.io/${{ github.repository }}:latest /bin/bash run_demo.sh --stage-4
