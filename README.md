@@ -5,7 +5,7 @@ This repository provides a highly comprehensive, end-to-end hands-on laboratory 
 
 ---
 
-## 🚀 The 4 Security Pillars of Containers
+##  The 4 Security Pillars of Containers
 
 Containers achieve performance and portability by sharing resources, but weak configurations can expand local breaches into total host infrastructure compromises. This lab explores and validates the four crucial pillars of container security:
 
@@ -18,19 +18,19 @@ Containers achieve performance and portability by sharing resources, but weak co
 
 ---
 
-## 📂 Laboratory Repository Contents
+##  Laboratory Repository Contents
 
 This workspace is packed with source code, orchestration scripts, automated CI/CD configurations, and programmatic documentation generators:
 
-### ⚙️ Core Lab Environment
+###  Core Lab Environment
 *   [`Dockerfile`](file:///d:/Dirty%20cow%20Docker/Dockerfile): Sets up the container base, configures an unprivileged system user `victim`, establishes read-only root targets, and models socket/volume interfaces.
 *   [`dirtyc0w.c`](file:///d:/Dirty%20cow%20Docker/dirtyc0w.c): A highly optimized C implementation of the CVE-2016-5195 race condition exploit using `mmap()`, `madvise(MADV_DONTNEED)`, and `/proc/self/mem` writing threads.
 *   [`run_demo.sh`](file:///d:/Dirty%20cow%20Docker/run_demo.sh): The core Purple Team orchestrator. It displays real-time container diagnostics, builds/runs the Dirty COW exploit, models Stage 2-4 boundary violations, highlights detection indicators, and outlines remediation steps.
 
-### 🤖 Automated DevSecOps Pipelines
+###  Automated DevSecOps Pipelines
 *   [`.github/workflows/dirtycow-lab.yml`](file:///d:/Dirty%20cow%20Docker/.github/workflows/dirtycow-lab.yml): The GitHub Actions CI/CD configuration. Automatically builds the container and runs all four stages sequentially on every repository push and pull request, serving as a regression security containment scanner.
 
-### 📊 Programmatic Presentation & Guide Generators
+###  Programmatic Presentation & Guide Generators
 We have included robust python tools to generate premium, boardroom-ready documentation and slide decks dynamically from code metadata:
 *   [`generate_presentation.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation.py): Generates a premium 16-slide deep dive deck on the Dirty COW (CVE-2016-5195) mechanics, virtual paging subsystem, and kernel race behaviors.
 *   [`generate_presentation_4stage.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation_4stage.py): Generates a sleek, 10-slide architectural deck outlining the 4-stage Purple Team Lab, threat mappings, and security best practices.
@@ -42,7 +42,7 @@ We have included robust python tools to generate premium, boardroom-ready docume
 
 ---
 
-## 🛠️ How to Run the Laboratory
+##  How to Run the Laboratory
 
 Ensure you have **Docker** running on your host system, then execute the following commands in your shell:
 
