@@ -1,3 +1,4 @@
+# Hardened Dockerfile configured by Hexa Force Container Security Lab
 # Use Ubuntu base image
 FROM ubuntu:20.04
 
