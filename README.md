@@ -32,11 +32,13 @@ This workspace is packed with source code, orchestration scripts, automated CI/C
 
 ###  Programmatic Presentation & Guide Generators
 We have included robust python tools to generate premium, boardroom-ready documentation and slide decks dynamically from code metadata:
- **Implementation Guide** document with callouts, code syntax boxes, and styled tables.
+*   [`generate_presentation.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation.py): Generates a premium 16-slide deep dive deck on the Dirty COW (CVE-2016-5195) mechanics, virtual paging subsystem, and kernel race behaviors.
+*   [`generate_presentation_4stage.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation_4stage.py): Generates a sleek, 11-slide architectural deck outlining the 4-stage Hexa Force Lab, threat mappings, and security best practices.
+*   [`generate_docx.py`](file:///d:/Dirty%20cow%20Docker/generate_docx.py): Generates a professionally formatted, highly detailed **Implementation Guide** document with callouts, code syntax boxes, and styled tables.
 *   **Generated Assets**: 
-    *   [`Dirty_COW_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Dirty_COW_Presentation.pptx)
-    *   [`Hexa_Force_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Lab_Presentation.pptx)
-    *   [`Hexa_Force_Implementation_Guide.docx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Implementation_Guide.docx)
+    *   [`Dirty_COW_Technical_Briefing.pptx`](file:///d:/Dirty%20cow%20Docker/Dirty_COW_Technical_Briefing.pptx)
+    *   [`Hexa_Force_Secure_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Secure_Lab_Presentation.pptx)
+    *   [`Hexa_Force_Secure_Lab_Guide.docx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Secure_Lab_Guide.docx)
 
 ---
 
