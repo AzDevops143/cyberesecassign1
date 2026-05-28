@@ -31,7 +31,7 @@ def set_dark_bg(slide):
     fill.fore_color.rgb = COLOR_BG
 
 # Helper function to create title section on content slides
-def add_slide_header(slide, title_text, category="PURPLE TEAM CONTAINER SECURITY"):
+def add_slide_header(slide, title_text, category="HEXA FORCE CONTAINER SECURITY"):
     # Add a thin cyan category label
     cat_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.7), Inches(0.3))
     tf_cat = cat_box.text_frame
@@ -194,7 +194,7 @@ tf = title_box.text_frame
 tf.word_wrap = True
 
 p1 = tf.paragraphs[0]
-p1.text = "PURPLE TEAM CONTAINER LAB"
+p1.text = "HEXA FORCE CONTAINER LAB"
 p1.font.name = "Trebuchet MS"
 p1.font.size = Pt(54)
 p1.font.bold = True
@@ -250,7 +250,7 @@ add_bullet_points(slide, Inches(6.8), Inches(1.8), Inches(5.7), Inches(4.8), [
     "  - Validated dirtycow-lab.yml and automated execution steps.",
     "07. DevSecOps Hardening Checklist",
     "  - Hands-on rules to protect and secure container workloads.",
-    "08. Purple Team Conclusion",
+    "08. Hexa Force Conclusion",
     "  - Key lessons, takeaways, and final architecture summaries."
 ])
 
@@ -330,7 +330,7 @@ add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
 
 add_info_card(
     slide, Inches(7.2), Inches(1.8), Inches(5.3), Inches(4.8),
-    "Detection & Mitigation Blueprint", "Purple Team Remediation",
+    "Detection & Mitigation Blueprint", "Hexa Force Remediation",
     [
         "Detection: Static scan container kernels for CVE-2016-5195 signatures.",
         "Detection: Audit syscall sequences using seccomp/madvise logs.",
@@ -361,7 +361,7 @@ add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
 
 add_info_card(
     slide, Inches(7.2), Inches(1.8), Inches(5.3), Inches(4.8),
-    "Detection & Mitigation Blueprint", "Purple Team Remediation",
+    "Detection & Mitigation Blueprint", "Hexa Force Remediation",
     [
         "Detection: Static configuration checks for --pid=host flags.",
         "Detection: Monitor runtime capabilities block registers for CAP_SYS_PTRACE.",
@@ -392,7 +392,7 @@ add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
 
 add_info_card(
     slide, Inches(7.2), Inches(1.8), Inches(5.3), Inches(4.8),
-    "Detection & Mitigation Blueprint", "Purple Team Remediation",
+    "Detection & Mitigation Blueprint", "Hexa Force Remediation",
     [
         "Detection: Track volume configuration definitions containing docker.sock.",
         "Detection: Run runtime monitoring (e.g. Falco) to flag HTTP curl operations against socket files.",
@@ -423,7 +423,7 @@ add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
 
 add_info_card(
     slide, Inches(7.2), Inches(1.8), Inches(5.3), Inches(4.8),
-    "Detection & Mitigation Blueprint", "Purple Team Remediation",
+    "Detection & Mitigation Blueprint", "Hexa Force Remediation",
     [
         "Detection: Configure File Integrity Monitoring (FIM) on /etc/cron* folders.",
         "Detection: Audit file modification commands using standard host logging (auditd).",
@@ -525,7 +525,7 @@ add_info_card(
 # ==========================================
 slide = prs.slides.add_slide(slide_layout)
 set_dark_bg(slide)
-add_slide_header(slide, "Conclusion: Purple Team Lab Debriefing", "KEY TAKEAWAYS")
+add_slide_header(slide, "Conclusion: Hexa Force Lab Debriefing", "KEY TAKEAWAYS")
 
 add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
     "Containers Share Host OS Foundations",
@@ -534,7 +534,7 @@ add_bullet_points(slide, Inches(0.8), Inches(1.8), Inches(6.0), Inches(5.0), [
     "Mitigations are Multi-layered",
     "  - Securing pipelines requires host updates, capabilities control,",
     "  - socket restrictions, and read-only storage settings.",
-    "[DEFENDED] Successful Purple Team Outcome",
+    "[DEFENDED] Successful Hexa Force Outcome",
     "  - The CI/CD pipeline verified that modern kernels and proper",
     "  - read-only volume controls successfully contain advanced escapes.",
     "Continuous Security Regression Testing",
@@ -553,6 +553,6 @@ add_info_card(
 )
 
 # Save the presentation
-output_path = "Purple_Team_Lab_Presentation.pptx"
+output_path = "Hexa_Force_Lab_Presentation.pptx"
 prs.save(output_path)
 print(f"[+] Successfully generated widescreen 16:9 presentation at: {os.path.abspath(output_path)}")

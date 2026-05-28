@@ -1,7 +1,7 @@
-# Purple Team Container Security Lab
+# Hexa Force: Container Security Lab
 ### *A 4-Stage DevSecOps Attack, Detection, and Defense Laboratory (CVE-2016-5195 & Escape Boundaries)*
 
-This repository provides a highly comprehensive, end-to-end hands-on laboratory designed to demonstrate, analyze, and mitigate the four primary security boundary escape vectors in Docker container environments. Rather than focusing solely on **Dirty COW (CVE-2016-5195)**, this laboratory expands into a complete **Purple Team Container Security Lab** illustrating the entire attack-defense lifecycle across all key container isolation boundaries.
+This repository provides a highly comprehensive, end-to-end hands-on laboratory designed to demonstrate, analyze, and mitigate the four primary security boundary escape vectors in Docker container environments. Developed by **Hexa Force**, this laboratory expands into a complete **Hexa Force Purple Team Container Security Lab** illustrating the entire attack-defense lifecycle across all key container isolation boundaries.
 
 ---
 
@@ -25,7 +25,7 @@ This workspace is packed with source code, orchestration scripts, automated CI/C
 ###  Core Lab Environment
 *   [`Dockerfile`](file:///d:/Dirty%20cow%20Docker/Dockerfile): Sets up the container base, configures an unprivileged system user `victim`, establishes read-only root targets, and models socket/volume interfaces.
 *   [`dirtyc0w.c`](file:///d:/Dirty%20cow%20Docker/dirtyc0w.c): A highly optimized C implementation of the CVE-2016-5195 race condition exploit using `mmap()`, `madvise(MADV_DONTNEED)`, and `/proc/self/mem` writing threads.
-*   [`run_demo.sh`](file:///d:/Dirty%20cow%20Docker/run_demo.sh): The core Purple Team orchestrator. It displays real-time container diagnostics, builds/runs the Dirty COW exploit, models Stage 2-4 boundary violations, highlights detection indicators, and outlines remediation steps.
+*   [`run_demo.sh`](file:///d:/Dirty%20cow%20Docker/run_demo.sh): The core Hexa Force orchestrator. It displays real-time container diagnostics, builds/runs the Dirty COW exploit, models Stage 2-4 boundary violations, highlights detection indicators, and outlines remediation steps.
 
 ###  Automated DevSecOps Pipelines
 *   [`.github/workflows/dirtycow-lab.yml`](file:///d:/Dirty%20cow%20Docker/.github/workflows/dirtycow-lab.yml): The GitHub Actions CI/CD configuration. Automatically builds the container and runs all four stages sequentially on every repository push and pull request, serving as a regression security containment scanner.
@@ -33,12 +33,12 @@ This workspace is packed with source code, orchestration scripts, automated CI/C
 ###  Programmatic Presentation & Guide Generators
 We have included robust python tools to generate premium, boardroom-ready documentation and slide decks dynamically from code metadata:
 *   [`generate_presentation.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation.py): Generates a premium 16-slide deep dive deck on the Dirty COW (CVE-2016-5195) mechanics, virtual paging subsystem, and kernel race behaviors.
-*   [`generate_presentation_4stage.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation_4stage.py): Generates a sleek, 10-slide architectural deck outlining the 4-stage Purple Team Lab, threat mappings, and security best practices.
+*   [`generate_presentation_4stage.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation_4stage.py): Generates a sleek, 10-slide architectural deck outlining the 4-stage Hexa Force Lab, threat mappings, and security best practices.
 *   [`generate_docx.py`](file:///d:/Dirty%20cow%20Docker/generate_docx.py): Generates a professionally formatted, highly detailed **Implementation Guide** document with callouts, code syntax boxes, and styled tables.
 *   **Generated Assets**: 
     *   [`Dirty_COW_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Dirty_COW_Presentation.pptx)
-    *   [`Purple_Team_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Purple_Team_Lab_Presentation.pptx)
-    *   [`Implementation_Guide.docx`](file:///d:/Dirty%20cow%20Docker/Implementation_Guide.docx)
+    *   [`Hexa_Force_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Lab_Presentation.pptx)
+    *   [`Hexa_Force_Implementation_Guide.docx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Implementation_Guide.docx)
 
 ---
 
@@ -52,7 +52,7 @@ Compile the secure, low-privileged environment:
 docker build -t dirtycow-lab .
 ```
 
-### Step 2: Run the Purple Team Orchestrator
+### Step 2: Run the Hexa Force Orchestrator
 Execute the container. By default, it will run all 4 stages sequentially:
 ```powershell
 docker run --rm -it dirtycow-lab
@@ -121,7 +121,7 @@ pip install python-pptx python-docx
 
 # 2. Recompile the slide decks & guide
 python generate_presentation.py        # Generates Dirty COW deep-dive PPTX
-python generate_presentation_4stage.py # Generates 4-Stage Purple Team PPTX
+python generate_presentation_4stage.py # Generates 4-Stage Hexa Force PPTX
 python generate_docx.py                 # Generates Implementation Guide DOCX
 ```
 

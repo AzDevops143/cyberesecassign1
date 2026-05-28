@@ -62,7 +62,7 @@ def create_document():
     title_p = doc.add_paragraph()
     title_p.paragraph_format.space_before = Pt(0)
     title_p.paragraph_format.space_after = Pt(4)
-    run_title = title_p.add_run("IMPLEMENTATION GUIDE: PURPLE TEAM LAB")
+    run_title = title_p.add_run("IMPLEMENTATION GUIDE: HEXA FORCE LAB")
     run_title.font.name = 'Trebuchet MS'
     run_title.font.size = Pt(24)
     run_title.font.bold = True
@@ -189,7 +189,7 @@ def create_document():
     add_heading_1("1. Laboratory Overview & Architecture")
     
     p = doc.add_paragraph()
-    p.add_run("In modern DevSecOps deployment structures, container workloads frequently share a singular base kernel infrastructure. If container controls are weakly configured, a local vulnerability can expand into a total host infrastructure compromise. This Purple Team Laboratory demonstrates the four primary dimensions of container security isolation: Kernel separation, Namespace boundaries, Daemon interface control, and Volume access rules.")
+    p.add_run("In modern DevSecOps deployment structures, container workloads frequently share a singular base kernel infrastructure. If container controls are weakly configured, a local vulnerability can expand into a total host infrastructure compromise. This Hexa Force Laboratory demonstrates the four primary dimensions of container security isolation: Kernel separation, Namespace boundaries, Daemon interface control, and Volume access rules.")
     
     p = doc.add_paragraph()
     p.add_run("The laboratory provides interactive exploitation, detection system triggers, and mitigation automation to show how a pipeline secures itself at runtime. The workflow builds a single test image and executes the four stages sequentially, checking if defensive measures successfully prevent escape vectors.")
@@ -376,7 +376,7 @@ def create_document():
         run_desc = p.add_run(desc)
 
     # Save
-    output_path = "Implementation_Guide.docx"
+    output_path = "Hexa_Force_Implementation_Guide.docx"
     doc.save(output_path)
     print(f"[+] Document successfully generated at: {os.path.abspath(output_path)}")
 

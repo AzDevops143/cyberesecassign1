@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Purple Team Container Security Lab Orchestrator
+# Hexa Force Container Security Lab Orchestrator
 # Shows the 4 Pillars of Container Security: Vulnerability, Exploit, Detection, and Defense.
 
 RED='\033[0;31m'
@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 show_banner() {
     echo -e "${CYAN}================================================================${NC}"
-    echo -e "${CYAN}         Purple Team Container Security Attack Lab             ${NC}"
+    echo -e "${CYAN}         Hexa Force Container Security Attack Lab              ${NC}"
     echo -e "${CYAN}================================================================${NC}"
     echo ""
 }
