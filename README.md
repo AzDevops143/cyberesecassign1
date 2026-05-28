@@ -77,7 +77,7 @@ docker run --rm -it dirtycow-lab /bin/bash run_demo.sh --stage-4
 
 ---
 
-## 🔍 Deep-Dive: Under-the-Hood Exploit Flows
+##  Deep-Dive: Under-the-Hood Exploit Flows
 
 ### 1. Stage 1: Dirty COW Memory Corruption (CVE-2016-5195)
 1. **Memory Mapping**: The C exploit opens a target file read-only, mapping it into virtual memory as a private, Copy-on-Write mapping:
@@ -111,7 +111,7 @@ docker run --rm -it dirtycow-lab /bin/bash run_demo.sh --stage-4
 
 ---
 
-## 📈 Re-Generating Presentations & Handbooks
+##  Re-Generating Presentations & Handbooks
 
 If you wish to customize or rebuild the PowerPoint slide decks or Word guides, make sure you have Python installed, install the required packages, and execute the scripts:
 
@@ -127,7 +127,7 @@ python generate_docx.py                 # Generates Implementation Guide DOCX
 
 ---
 
-## 🛡️ DevSecOps Workload Hardening Checklist
+##  DevSecOps Workload Hardening Checklist
 
 To protect production clusters and secure docker environments against container escapes:
 *   [ ] **Apply Host Kernel Patches**: Keeping the underlying host OS kernel fully updated is the absolute foundation of container cluster security.
