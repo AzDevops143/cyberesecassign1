@@ -27,12 +27,14 @@ This workspace is packed with source code, orchestration scripts, automated CI/C
 *   [`dirtyc0w.c`](file:///d:/Dirty%20cow%20Docker/dirtyc0w.c): A highly optimized C implementation of the CVE-2016-5195 race condition exploit using `mmap()`, `madvise(MADV_DONTNEED)`, and `/proc/self/mem` writing threads.
 *   [`run_demo.sh`](file:///d:/Dirty%20cow%20Docker/run_demo.sh): The core Hexa Force orchestrator. It displays real-time container diagnostics, builds/runs the Dirty COW exploit, models Stage 2-4 boundary violations, highlights detection indicators, and outlines remediation steps.
 
-###  Automated DevSecOps Pipelines
-*   [`.github/workflows/dirtycow-lab.yml`](file:///d:/Dirty%20cow%20Docker/.github/workflows/dirtycow-lab.yml): The GitHub Actions CI/CD configuration. Automatically builds the container and runs all four stages sequentially on every repository push and pull request, serving as a regression security containment scanner.
+### 🤖 Automated DevSecOps Pipelines with Container Signing (Sigstore/Cosign)
+*   [`.github/workflows/dirtycow-lab.yml`](file:///d:/Dirty%20cow%20Docker/.github/workflows/dirtycow-lab.yml): The GitHub Actions CI/CD configuration. Automatically builds the container, publishes it securely to the GitHub Container Registry (`ghcr.io`), cryptographically signs the image keylessly using **Cosign (Sigstore)** via OIDC, and runs all four security stages sequentially on the signed image.
 
-###  Programmatic Presentation & Guide Generators
+### 📊 Programmatic Presentation & Guide Generators
 We have included robust python tools to generate premium, boardroom-ready documentation and slide decks dynamically from code metadata:
- **Implementation Guide** document with callouts, code syntax boxes, and styled tables.
+*   [`generate_presentation.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation.py): Generates a premium 16-slide deep dive deck on the Dirty COW (CVE-2016-5195) mechanics, virtual paging subsystem, and kernel race behaviors.
+*   [`generate_presentation_4stage.py`](file:///d:/Dirty%20cow%20Docker/generate_presentation_4stage.py): Generates a sleek, 10-slide architectural deck outlining the 4-stage Hexa Force Lab, threat mappings, and security best practices.
+*   [`generate_docx.py`](file:///d:/Dirty%20cow%20Docker/generate_docx.py): Generates a professionally formatted, highly detailed **Implementation Guide** document with callouts, code syntax boxes, and styled tables.
 *   **Generated Assets**: 
     *   [`Dirty_COW_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Dirty_COW_Presentation.pptx)
     *   [`Hexa_Force_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Lab_Presentation.pptx)
