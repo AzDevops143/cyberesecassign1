@@ -3,225 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hexa Force | Attack & Defense</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    <title>Hexa Force | Exploit & Containment Architecture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #07090f;
-            --primary: #00f3ff;
-            --danger: #ff003c;
-            --success: #00ff66;
-            --text: #e0e6ed;
-            --surface: rgba(20, 25, 40, 0.7);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text);
-            overflow-x: hidden;
-            scroll-behavior: smooth;
-        }
-
-        /* Full Screen Snap Scrolling for Presentation Feel */
-        .presentation-container {
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-        }
-
-        .slide {
-            height: 100vh;
-            width: 100vw;
-            scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-            position: relative;
-        }
-
-        .slide::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at center, transparent 0%, var(--bg-color) 100%);
-            z-index: -1;
-        }
-
-        /* Glassmorphism Cards */
-        .glass-card {
-            background: var(--surface);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 50px;
-            max-width: 1000px;
-            width: 100%;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-            text-align: left;
-        }
-
-        h1 { font-size: 5rem; font-weight: 900; letter-spacing: -2px; margin-bottom: 20px; text-align: center; }
-        h2 { font-size: 3rem; font-weight: 700; margin-bottom: 30px; letter-spacing: -1px; }
-        h1 span { color: var(--primary); text-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
-        
-        .danger-text { color: var(--danger); text-shadow: 0 0 20px rgba(255, 0, 60, 0.4); }
-        .success-text { color: var(--success); text-shadow: 0 0 20px rgba(0, 255, 102, 0.4); }
-
-        p { font-size: 1.5rem; line-height: 1.6; color: #a0aec0; margin-bottom: 20px; }
-
-        /* Custom Grid for Attack Steps */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 40px;
-        }
-
-        .step-box {
-            background: rgba(0,0,0,0.4);
-            border-left: 4px solid var(--danger);
-            padding: 30px;
-            border-radius: 0 15px 15px 0;
-            transition: transform 0.3s ease;
-        }
-
-        .step-box:hover {
-            transform: translateX(10px);
-            background: rgba(255,0,60,0.1);
-        }
-
-        .step-box.defense {
-            border-left-color: var(--success);
+            --bg: #050505;
+            --attack: #ff2a5f;
+            --attack-glow: rgba(255, 42, 95, 0.4);
+            --defense: #00ff88;
+            --defense-glow: rgba(0, 255, 136, 0.4);
+            --text: #e2e8f0;
+            --panel: rgba(20, 20, 25, 0.8);
         }
         
-        .step-box.defense:hover {
-            background: rgba(0,255,102,0.1);
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', sans-serif; }
+        body { background: var(--bg); color: var(--text); overflow-x: hidden; }
+        
+        /* Particle Background */
+        #particles-js { position: fixed; width: 100vw; height: 100vh; z-index: -1; top: 0; left: 0; }
+        
+        header { text-align: center; padding: 100px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); }
+        h1 { font-size: 4rem; font-weight: 700; background: linear-gradient(90deg, #00f3ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom:10px; }
+        p.subtitle { font-size: 1.5rem; color: #8892b0; margin-top: 10px; }
+
+        /* Timeline Container */
+        .timeline { position: relative; max-width: 1200px; margin: 100px auto; padding: 20px; }
+        
+        /* Central Glowing Line */
+        .timeline::after {
+            content: ''; position: absolute; width: 4px; background: linear-gradient(to bottom, var(--attack), var(--defense));
+            top: 0; bottom: 0; left: 50%; margin-left: -2px; border-radius: 5px;
+            box-shadow: 0 0 15px var(--attack);
         }
 
-        .step-box h3 { font-size: 1.8rem; margin-bottom: 15px; color: #fff; }
-        .step-box p { font-size: 1.1rem; margin-bottom: 0; }
+        /* Timeline Items */
+        .container { padding: 10px 50px; position: relative; width: 50%; animation: fadeIn 1s ease-in-out forwards; opacity: 0; transform: translateY(50px); margin-bottom: 60px; }
+        .left { left: 0; text-align: right; }
+        .right { left: 50%; text-align: left; }
 
-        /* Code aesthetics */
-        code {
-            font-family: 'Fira Code', monospace;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 5px;
-            color: var(--primary);
-            font-size: 1.2rem;
+        /* Timeline Dots */
+        .container::after {
+            content: ''; position: absolute; width: 20px; height: 20px; right: -12px;
+            background-color: var(--bg); border: 4px solid var(--attack); top: 30px; border-radius: 50%; z-index: 1;
+            box-shadow: 0 0 15px var(--attack);
         }
+        .right::after { left: -12px; border-color: var(--defense); box-shadow: 0 0 15px var(--defense); }
 
-        /* Scroll indicator */
-        .scroll-down {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            animation: bounce 2s infinite;
-            color: var(--primary);
-            font-size: 2rem;
-            opacity: 0.5;
+        /* Content Panels */
+        .content {
+            padding: 40px; background: var(--panel); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 20px; backdrop-filter: blur(15px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative;
         }
+        .left .content { border-right: 4px solid var(--attack); }
+        .right .content { border-left: 4px solid var(--defense); }
+        
+        .left .content:hover { box-shadow: -15px 15px 40px var(--attack-glow); transform: scale(1.03) translateX(-10px); }
+        .right .content:hover { box-shadow: 15px 15px 40px var(--defense-glow); transform: scale(1.03) translateX(10px); }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
-            40% { transform: translateY(-20px) translateX(-50%); }
-            60% { transform: translateY(-10px) translateX(-50%); }
+        h2 { font-size: 2.2rem; margin-bottom: 15px; letter-spacing: -1px; }
+        .left h2 { color: var(--attack); }
+        .right h2 { color: var(--defense); }
+        p { font-size: 1.1rem; color: #a0aec0; line-height: 1.7; }
+
+        /* Terminal blocks */
+        .terminal {
+            background: #0d1117; border-radius: 10px; padding: 20px; margin-top: 25px;
+            font-family: 'Fira Code', monospace; font-size: 0.95rem; text-align: left;
+            border: 1px solid #30363d; color: #c9d1d9; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
         }
+        .term-red { color: #ff7b72; font-weight: bold; }
+        .term-green { color: #3fb950; font-weight: bold; }
+        .term-blue { color: #79c0ff; font-weight: bold; }
 
-        /* Background grid effect */
-        .bg-grid {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-size: 50px 50px;
-            background-image: 
-                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-            z-index: -2;
+        /* Animations */
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Staggered loading */
+        .c1 { animation-delay: 0.2s; } .c2 { animation-delay: 0.4s; }
+        .c3 { animation-delay: 0.6s; } .c4 { animation-delay: 0.8s; }
+        .c5 { animation-delay: 1.0s; } .c6 { animation-delay: 1.2s; }
+        .c7 { animation-delay: 1.4s; } .c8 { animation-delay: 1.6s; }
+        
+        @media (max-width: 900px) {
+            .timeline::after { left: 31px; }
+            .container { width: 100%; padding-left: 80px; padding-right: 25px; text-align: left; }
+            .right { left: 0; }
+            .left::after, .right::after { left: 19px; }
+            .left .content { border-right: none; border-left: 4px solid var(--attack); }
+            .left .content:hover { transform: scale(1.02) translateX(10px); box-shadow: 15px 15px 40px var(--attack-glow); }
         }
-
     </style>
 </head>
 <body>
+    <!-- Particles.js for interactive hacker aesthetic -->
+    <div id="particles-js"></div>
 
-    <div class="bg-grid"></div>
+    <header>
+        <h1>Hexa Force Architecture</h1>
+        <p class="subtitle">Anatomy of a Container Escape vs. Surgical Containment Defenses</p>
+    </header>
 
-    <div class="presentation-container">
+    <div class="timeline">
         
-        <!-- Slide 1: Title -->
-        <div class="slide" id="slide1">
-            <h1>Hexa <span>Force</span></h1>
-            <p style="text-align: center; font-size: 2rem; max-width: 800px;">
-                Understanding Container Escapes & <br>Surgical Containment Defenses
-            </p>
-            <div class="scroll-down">↓</div>
-        </div>
-
-        <!-- Slide 2: The Attack (How it happens) -->
-        <div class="slide" id="slide2">
-            <div class="glass-card">
-                <h2 class="danger-text">How The Attack Happens</h2>
-                <p>An attacker breaks out of a container and takes over the physical host in four cascading stages.</p>
-                
-                <div class="grid-2">
-                    <div class="step-box">
-                        <h3 class="danger-text">1. The Kernel Exploit</h3>
-                        <p>The attacker runs <br><code>madvise()</code> and writes to <code>/proc/self/mem</code> simultaneously, triggering the <strong>Dirty COW</strong> race condition to overwrite read-only host memory.</p>
-                    </div>
-                    <div class="step-box">
-                        <h3 class="danger-text">2. Process Injection</h3>
-                        <p>Because the container shares the host's PID namespace, the attacker uses <code>CAP_SYS_PTRACE</code> to inject malicious shellcode directly into a running host process.</p>
-                    </div>
-                    <div class="step-box">
-                        <h3 class="danger-text">3. Daemon Hijacking</h3>
-                        <p>The attacker accesses a poorly configured <code>/var/run/docker.sock</code> mount, giving them raw HTTP API access to the host's Docker engine.</p>
-                    </div>
-                    <div class="step-box">
-                        <h3 class="danger-text">4. Host Persistence</h3>
-                        <p>Using the hijacked API, they spawn a new container that mounts the host's root filesystem (<code>/</code>), writing a backdoor directly into <code>/etc/cron.d</code>.</p>
-                    </div>
+        <!-- Step 1 Attack -->
+        <div class="container left c1">
+            <div class="content">
+                <h2>1. The Kernel Exploit</h2>
+                <p>The attacker triggers the Dirty COW race condition (CVE-2016-5195) to overwrite a read-only root file directly from the unprivileged container.</p>
+                <div class="terminal">
+                    <span class="term-blue">victim@container:~$</span> ./hexaforce_cow --exploit<br>
+                    <span class="term-red">[!]</span> Overwriting /usr/bin/passwd...<br>
+                    <span class="term-red">[+]</span> Container root achieved.
                 </div>
             </div>
-            <div class="scroll-down">↓</div>
         </div>
 
-        <!-- Slide 3: The Defense (How we stop it) -->
-        <div class="slide" id="slide3">
-            <div class="glass-card">
-                <h2 class="success-text">How We Stop The Attack</h2>
-                <p>Hexa Force implements an 8-layer defense-in-depth architecture that surgically severs the exploit chain without heavy performance penalties.</p>
-                
-                <div class="grid-2">
-                    <div class="step-box defense">
-                        <h3 class="success-text">1. Seccomp Filtering</h3>
-                        <p>We deploy a custom eBPF Seccomp profile that strictly blocks the <code>madvise</code> system call. This instantly neutralizes the Dirty COW memory race condition at the kernel boundary.</p>
-                    </div>
-                    <div class="step-box defense">
-                        <h3 class="success-text">2. Capability Dropping</h3>
-                        <p>We explicitly strip <code>CAP_SYS_PTRACE</code> and <code>CAP_SYS_ADMIN</code> from the container. Without these Linux capabilities, process injection becomes mathematically impossible.</p>
-                    </div>
-                    <div class="step-box defense">
-                        <h3 class="success-text">3. Namespace Isolation</h3>
-                        <p>We enforce strict PID namespace isolation. The container can no longer "see" host-level processes, preventing targeting and lateral movement.</p>
-                    </div>
-                    <div class="step-box defense">
-                        <h3 class="success-text">4. Immutable Mounts</h3>
-                        <p>We restrict volume mounts and enforce read-only root filesystems (<code>--read-only</code>), ensuring the host filesystem cannot be tampered with even if API access is compromised.</p>
-                    </div>
+        <!-- Step 1 Defense -->
+        <div class="container right c2">
+            <div class="content">
+                <h2>Defense: Seccomp Filtering</h2>
+                <p>We deploy a surgical eBPF Seccomp profile to block the specific <code>madvise</code> syscall required for the race condition, stopping it at the kernel boundary.</p>
+                <div class="terminal">
+                    <span class="term-green">"names":</span> ["madvise"],<br>
+                    <span class="term-green">"action":</span> "SCMP_ACT_ERRNO"
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 Attack -->
+        <div class="container left c3">
+            <div class="content">
+                <h2>2. Process Injection</h2>
+                <p>Using shared PID namespaces, the attacker abuses <code>CAP_SYS_PTRACE</code> to inject malicious shellcode directly into host daemons.</p>
+                <div class="terminal">
+                    <span class="term-red">[!]</span> Scanning host PID namespace...<br>
+                    <span class="term-red">[+]</span> Injecting payload into PID 1204 (Host)
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 Defense -->
+        <div class="container right c4">
+            <div class="content">
+                <h2>Defense: Capability Dropping</h2>
+                <p>By enforcing the Principle of Least Privilege, we mathematically eliminate process injection capabilities from the container environment.</p>
+                <div class="terminal">
+                    <span class="term-blue">docker run</span> --cap-drop=ALL \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--cap-drop=SYS_PTRACE
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3 Attack -->
+        <div class="container left c5">
+            <div class="content">
+                <h2>3. Daemon API Hijacking</h2>
+                <p>The attacker accesses a mounted <code>/var/run/docker.sock</code>, gaining raw HTTP access to the Docker engine to manipulate infrastructure.</p>
+                <div class="terminal">
+                    <span class="term-blue">curl</span> -X POST --unix-socket /var/run/docker.sock<br>
+                    <span class="term-red">[+]</span> Spawning unconstrained sibling container
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3 Defense -->
+        <div class="container right c6">
+            <div class="content">
+                <h2>Defense: Socket Isolation</h2>
+                <p>We strictly prohibit exposing the Docker daemon socket to unprivileged containers, completely neutralizing API hijacks.</p>
+                <div class="terminal">
+                    <span class="term-green">Rule:</span> Avoid mounting -v /var/run/docker.sock
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4 Attack -->
+        <div class="container left c7">
+            <div class="content">
+                <h2>4. Persistent Takeover</h2>
+                <p>The attacker mounts the physical host filesystem (<code>/</code>) and writes a reverse shell to the host's cron daemon.</p>
+                <div class="terminal">
+                    <span class="term-blue">echo</span> "* * * * * root reverse_shell" > /mnt/host/etc/cron.d/pwn<br>
+                    <span class="term-red">[+]</span> Physical host compromised persistently.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4 Defense -->
+        <div class="container right c8">
+            <div class="content">
+                <h2>Defense: Immutable Mounts</h2>
+                <p>We enforce read-only filesystems and strict volume controls, making it physically impossible for attackers to drop persistent backdoors.</p>
+                <div class="terminal">
+                    <span class="term-blue">docker run</span> --read-only \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--security-opt no-new-privileges
                 </div>
             </div>
         </div>
 
     </div>
 
+    <!-- Scripts for interactive background -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": ["#00f3ff", "#00ff88", "#ff2a5f"] },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": false },
+                "size": { "value": 4, "random": true },
+                "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.15, "width": 1.5 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 200, "line_linked": { "opacity": 1 } }, "push": { "particles_nb": 3 } }
+            },
+            "retina_detect": true
+        });
+    </script>
 </body>
 </html>
