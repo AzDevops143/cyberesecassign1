@@ -39,10 +39,14 @@ graph TD
     style E fill:#b71c1c,stroke:#333,stroke-width:4px,color:#fff
 ```
 
-1. **Host Kernel Isolation (CVE-2016-5195):** Exploiting a Copy-on-Write (COW) race condition from within an unprivileged container process to overwrite a read-only root file.
-2. **Namespace & Capabilities Isolation:** Abusing `CAP_SYS_PTRACE` and shared PID namespaces to inject code into host processes.
-3. **Daemon & API Security:** Hijacking a mounted `/var/run/docker.sock` to gain raw engine control.
-4. **Volume & Filesystem Security:** Exploiting writable host filesystem mounts to inject malicious tasks into the host's cron daemon for persistent access.
+### Attack Vector Analysis Matrix
+
+| Stage | Security Boundary Compromised | Exploit Vector / Technique | Consequence / Impact |
+| :---: | :--- | :--- | :--- |
+| **01** | **Host Kernel Isolation** | Copy-on-Write (COW) Race Condition (CVE-2016-5195) | Container-root privilege escalation via read-only memory overwrite. |
+| **02** | **Namespace & Capabilities** | Abuse of `CAP_SYS_PTRACE` across shared PID namespaces | Arbitrary code injection into privileged host-level daemon processes. |
+| **03** | **Daemon & API Surface** | Hijacked Unix Socket (`/var/run/docker.sock`) | Raw Docker engine control, enabling unconstrained sibling container spawning. |
+| **04** | **Volume & Filesystem** | Writable Host Mount Escalation (`/mnt/host`) | Persistent physical host takeover via malicious cron job injection. |
 
 ---
 
