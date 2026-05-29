@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexa Force: 4-Stage Attack Architecture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Space Grotesk', sans-serif;
+            line-height: 1.6;
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #58a6ff;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 50px;
+        }
+        h2 {
+            color: #ff7b72;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        .vulnerability {
+            background-color: rgba(255, 123, 114, 0.1);
+            border-left: 4px solid #ff7b72;
+            padding: 15px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .description {
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+        .mermaid-container {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Hexa Force: 4-Stage Attack Architecture</h1>
+    <p style="text-align: center; font-size: 1.2em; color: #8b949e; margin-bottom: 50px;">
+        This document breaks down the complete cascading failure of container isolation across four distinct stages, leading from initial compromise to physical host takeover.
+    </p>
+
+    <!-- STAGE 1 -->
+    <h2>Stage 1: The Kernel Exploit (Dirty COW)</h2>
+    <div class="vulnerability">Vulnerability: CVE-2016-5195 (Host Kernel Copy-on-Write bug)</div>
+    <div class="description">
+        The attacker maps a read-only system file into virtual memory. By concurrently calling <code>madvise(MADV_DONTNEED)</code> and writing to <code>/proc/self/mem</code>, the host kernel gets confused during the memory fault and accidentally writes the malicious payload directly to the physical, read-only file on disk. This grants the attacker root privileges *inside* the container.
+    </div>
+    <div class="mermaid-container">
+        <pre class="mermaid">
+sequenceDiagram
+    participant C as Container
+    participant K as Host Kernel
+    participant F as Physical File
+    C->>K: mmap() read-only file
+    par
+        C->>K: madvise(MADV_DONTNEED)
+    and
+        C->>K: write(/proc/self/mem)
+    end
+    Note over C,K: Kernel race condition triggers
+    K-->>F: Malicious write succeeds on disk
+        </pre>
+    </div>
+
+    <!-- STAGE 2 -->
+    <h2>Stage 2: Process Injection (Namespace Bypass)</h2>
+    <div class="vulnerability">Vulnerability: Shared PID Namespace & CAP_SYS_PTRACE</div>
+    <div class="description">
+        With container-root achieved, the attacker leverages the shared PID namespace to "see" processes running on the underlying host. Using the <code>CAP_SYS_PTRACE</code> capability, the attacker injects malicious shellcode directly into the memory space of a privileged host daemon (e.g., a logging agent). The payload now executes on the host, escaping the container boundary.
+    </div>
+    <div class="mermaid-container">
+        <pre class="mermaid">
+sequenceDiagram
+    participant C as Container Root
+    participant NS as Shared PID Namespace
+    participant H as Host Process
+    C->>NS: Scan for host processes (e.g., PID 1204)
+    NS-->>C: Target found
+    C->>H: ptrace(ATTACH, 1204)
+    C->>H: Inject Shellcode via Registers
+    Note over C,H: Lateral Movement Achieved
+    H-->>H: Host executes injected payload
+        </pre>
+    </div>
+
+    <!-- STAGE 3 -->
+    <h2>Stage 3: Docker Daemon API Hijacking</h2>
+    <div class="vulnerability">Vulnerability: Exposed /var/run/docker.sock</div>
+    <div class="description">
+        The attacker discovers the host's Docker Unix socket is mounted inside the container. This socket is the raw HTTP API for the entire Docker engine. By sending crafted POST requests to this socket using <code>curl</code>, the attacker gains full administrative control over the host's container orchestrator.
+    </div>
+    <div class="mermaid-container">
+        <pre class="mermaid">
+sequenceDiagram
+    participant A as Attacker (Injected Payload)
+    participant S as docker.sock
+    participant D as Docker Engine (Host)
+    A->>S: curl -X POST http://localhost/containers/create
+    S->>D: Forward API Request
+    Note over S,D: Attacker has raw admin control
+    D-->>A: Created rogue container ID
+        </pre>
+    </div>
+
+    <!-- STAGE 4 -->
+    <h2>Stage 4: Persistent Host Takeover (Filesystem Pivot)</h2>
+    <div class="vulnerability">Vulnerability: Writable Host Mounts</div>
+    <div class="description">
+        Using the hijacked API from Stage 3, the attacker commands the Docker engine to spawn a new "sibling" container. Crucially, they configure this new container to mount the physical host's root directory (<code>/</code>) directly into the container (e.g., at <code>/mnt/host</code>). The attacker then writes a reverse shell script into the host's cron daemon folder. The physical host blindly executes this script, granting permanent control over the bare-metal server.
+    </div>
+    <div class="mermaid-container">
+        <pre class="mermaid">
+sequenceDiagram
+    participant A as Attacker
+    participant D as Docker Engine
+    participant V as Host Volume Mount
+    participant Cron as Host Cron Daemon
+    A->>D: Start rogue container (mount '/' to '/mnt/host')
+    D->>V: Mount physical host disk
+    A->>V: echo "* * * * * root reverse_shell" > /mnt/host/etc/cron.d/pwn
+    Note over V,Cron: Permanent Persistence Achieved
+    Cron-->>Cron: Host executes backdoor as Root
+        </pre>
+    </div>
+
+</body>
+</html>
