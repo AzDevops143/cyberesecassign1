@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexa Force | Advanced Container Security Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --surface-color: rgba(31, 40, 51, 0.7);
+            --border-color: rgba(102, 252, 241, 0.2);
+            --primary-cyan: #66fcf1;
+            --secondary-teal: #45a29e;
+            --danger-red: #ff3b30;
+            --warning-yellow: #ffcc00;
+            --text-main: #c5c6c7;
+            --text-bright: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(69, 162, 158, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(102, 252, 241, 0.08) 0%, transparent 50%);
+        }
+
+        /* Glassmorphism utility */
+        .glass {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 80px 20px 40px;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--text-bright);
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(102, 252, 241, 0.3);
+        }
+
+        header h1 span {
+            color: var(--primary-cyan);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            color: var(--secondary-teal);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Threat Model Grid */
+        .threat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 60px;
+            position: relative;
+        }
+
+        /* Connecting Line */
+        .threat-grid::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--secondary-teal), var(--danger-red));
+            z-index: -1;
+            opacity: 0.3;
+            transform: translateY(-50%);
+        }
+
+        @media (max-width: 1000px) {
+            .threat-grid::before { display: none; }
+        }
+
+        .stage-card {
+            padding: 30px 20px;
+            text-align: center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stage-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(102, 252, 241, 0.2);
+            border-color: var(--primary-cyan);
+        }
+
+        .stage-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.1);
+            position: absolute;
+            top: -10px;
+            right: 10px;
+        }
+
+        .stage-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .stage-title {
+            font-size: 1.2rem;
+            color: var(--text-bright);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .stage-desc {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-main);
+        }
+
+        /* Specific stage coloring on hover */
+        .stage-card:nth-child(1):hover .stage-icon { color: var(--primary-cyan); text-shadow: 0 0 15px var(--primary-cyan); }
+        .stage-card:nth-child(2):hover .stage-icon { color: var(--warning-yellow); text-shadow: 0 0 15px var(--warning-yellow); }
+        .stage-card:nth-child(3):hover .stage-icon { color: #ff9500; text-shadow: 0 0 15px #ff9500; }
+        .stage-card:nth-child(4):hover .stage-icon { color: var(--danger-red); text-shadow: 0 0 15px var(--danger-red); }
+
+        /* Architecture Section */
+        .architecture {
+            margin-top: 100px;
+            margin-bottom: 100px;
+            padding: 50px;
+        }
+
+        .arch-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .arch-header h2 {
+            font-size: 2.5rem;
+            color: var(--text-bright);
+        }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            padding: 20px;
+            border-radius: 8px;
+            color: #a9b7c6;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border: 1px solid #333;
+            margin-top: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .code-keyword { color: #cc7832; }
+        .code-string { color: #6a8759; }
+        .code-comment { color: #808080; }
+
+        /* Live Terminal Simulation */
+        .terminal {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            border: 1px solid #333;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 30px;
+            background: #2b2b2b;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 8px;
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ff5f56; }
+        .dot.yellow { background: #ffbd2e; }
+        .dot.green { background: #27c93f; }
+
+        .terminal-content {
+            margin-top: 20px;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .term-line {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: printLine 0.1s forwards;
+        }
+
+        .term-success { color: var(--primary-cyan); }
+        .term-error { color: var(--danger-red); }
+        .term-prompt { color: var(--warning-yellow); }
+
+        @keyframes printLine {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Benchmark Data */
+        .benchmark-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+
+        .benchmark-table th, .benchmark-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .benchmark-table th {
+            color: var(--primary-cyan);
+            font-weight: 600;
+        }
+
+        .benchmark-table tr:last-child td { border-bottom: none; }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-secure { background: rgba(39, 201, 63, 0.2); color: #27c93f; }
+        .badge-vulnerable { background: rgba(255, 59, 48, 0.2); color: #ff3b30; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 50px;
+        }
+
+        /* Animation Delays for Terminal */
+        .d-1 { animation-delay: 0.5s; }
+        .d-2 { animation-delay: 1.5s; }
+        .d-3 { animation-delay: 2.0s; }
+        .d-4 { animation-delay: 3.0s; }
+        .d-5 { animation-delay: 3.5s; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Hexa <span>Force</span></h1>
+        <p>Instrumented Containment Architecture & Kernel Escapes Lab</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Threat Model Section -->
+        <h3 style="text-align: center; color: var(--text-bright); margin-top: 20px; font-size: 1.5rem;">The 4-Stage Exploit Chain</h3>
+        
+        <div class="threat-grid">
+            <!-- Stage 1 -->
+            <div class="glass stage-card">
+                <div class="stage-number">01</div>
+                <div class="stage-icon">💥</div>
+                <h3 class="stage-title">Kernel Race Condition</h3>
+                <p class="stage-desc">CVE-2016-5195 (Dirty COW) is exploited via <code style="color:var(--primary-cyan)">madvise</code> to overwrite read-only host pages, granting container-root.</p>
+            </div>
+            
+            <!-- Stage 2 -->
+            <div class="glass stage-card">
+                <div class="stage-number">02</div>
+                <div class="stage-icon">🧬</div>
+                <h3 class="stage-title">Process Injection</h3>
+                <p class="stage-desc">Abusing <code style="color:var(--warning-yellow)">CAP_SYS_PTRACE</code> within shared PID namespaces to inject arbitrary payloads into host-level daemons.</p>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="glass stage-card">
+                <div class="stage-icon">🔌</div>
+                <div class="stage-number">03</div>
+                <h3 class="stage-title">Daemon API Hijack</h3>
+                <p class="stage-desc">Accessing an exposed <code style="color:#ff9500">docker.sock</code> to issue raw HTTP requests to the host Docker daemon, spawning sibling containers.</p>
+            </div>
+
+            <!-- Stage 4 -->
+            <div class="glass stage-card">
+                <div class="stage-icon">👑</div>
+                <div class="stage-number">04</div>
+                <h3 class="stage-title">Persistent Host Takeover</h3>
+                <p class="stage-desc">Writing to <code style="color:var(--danger-red)">/mnt/host/etc/cron.d</code> via a hijacked mount to establish a permanent reverse shell as physical host root.</p>
+            </div>
+        </div>
+
+        <!-- Interactive Terminal Demo -->
+        <div class="glass architecture" style="margin-top: 60px;">
+            <div class="arch-header">
+                <h2>Live Telemetry: <span style="color: var(--primary-cyan)">hexaforce_cow</span></h2>
+                <p>Simulated output of our custom-built race condition analyzer.</p>
+            </div>
+            
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                </div>
+                <div class="terminal-content">
+                    <div class="term-line d-1"><span class="term-prompt">victim@container:~$</span> ./hexaforce_cow --exploit /var/secret/target.txt "PWNED"</div>
+                    <div class="term-line d-2"><span class="term-success">[*]</span> Spawning discard thread (madvise loop)...</div>
+                    <div class="term-line d-2"><span class="term-success">[*]</span> Spawning write thread (/proc/self/mem loop)...</div>
+                    <div class="term-line d-3"><span class="term-prompt">[!]</span> Race condition triggered! Gathering telemetry...</div>
+                    <div class="term-line d-4"><span style="color:#fff">  Discard cycles (madvise)    : 42,109</span></div>
+                    <div class="term-line d-4"><span style="color:#fff">  Write cycles (/proc/self/mem): 41,882</span></div>
+                    <div class="term-line d-4"><span style="color:#fff">  Total race duration          : 12.45 ms</span></div>
+                    <div class="term-line d-5"><span class="term-error">[+] Status: *** EXPLOIT SUCCEEDED — read-only file was modified ***</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benchmark Data -->
+        <div class="glass architecture" style="padding: 40px;">
+            <div class="arch-header" style="margin-bottom: 30px;">
+                <h2>Security Efficacy vs Overhead</h2>
+            </div>
+            <table class="benchmark-table">
+                <thead>
+                    <tr>
+                        <th>Defense Mechanism</th>
+                        <th>Exploit Status</th>
+                        <th>Overhead Penalty</th>
+                        <th>Trade-off</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Unprivileged (Default)</td>
+                        <td><span class="status-badge badge-vulnerable">VULNERABLE (100%)</span></td>
+                        <td>0%</td>
+                        <td>No isolation beyond namespaces</td>
+                    </tr>
+                    <tr>
+                        <td>CAP_DROP Only</td>
+                        <td><span class="status-badge badge-vulnerable">VULNERABLE (100%)</span></td>
+                        <td>0%</td>
+                        <td>Stops Stage 2, fails to stop Stage 1</td>
+                    </tr>
+                    <tr>
+                        <td>Hexa Force Seccomp Profile</td>
+                        <td><span class="status-badge badge-secure">CONTAINED (0%)</span></td>
+                        <td>&lt; 1%</td>
+                        <td>Blocks madvise; impacts JVM/glibc</td>
+                    </tr>
+                    <tr>
+                        <td>Micro-VM (Kata Containers)</td>
+                        <td><span class="status-badge badge-secure">CONTAINED (0%)</span></td>
+                        <td>~15% + 150MB RAM</td>
+                        <td>Hardware isolation; heavy resource cost</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>Built for the IEEE Paper: <i>Securing Shared-Kernel Runtimes Against Kernel-Level Container Escapes</i></p>
+        <p style="margin-top: 10px; color: var(--primary-cyan);">IIT Jodhpur | School of AI and Data Science</p>
+    </footer>
+
+    <!-- Simple JS to replay terminal animation on scroll -->
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const lines = entry.target.querySelectorAll('.term-line');
+                    lines.forEach(line => {
+                        line.style.animation = 'none';
+                        line.offsetHeight; /* trigger reflow */
+                        line.style.animation = null; 
+                    });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        observer.observe(document.querySelector('.terminal'));
+    </script>
+</body>
+</html>
