@@ -1,4 +1,4 @@
-# 🔬 Hexa Force: Container Security & DevSecOps Laboratory
+#  Hexa Force: Container Security & DevSecOps Laboratory
 ### *A Widescreen 4-Stage Attack, Detection, and Mitigation Laboratory (CVE-2016-5195 & Escape Boundaries)*
 
 This repository provides a highly comprehensive, end-to-end hands-on laboratory designed to demonstrate, analyze, and mitigate the four primary security boundary escape vectors in Docker container environments. Developed by **Hexa Force**, this laboratory provides a complete attack-defense lifecycle across all key container isolation boundaries, fully integrated with automated DevSecOps pipelines and system-level syscall hardening.
