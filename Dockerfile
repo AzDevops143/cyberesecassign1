@@ -1,11 +1,15 @@
-# Hardened Dockerfile configured by Hexa Force Container Security Lab
-# Use Ubuntu base image
+# Hexa Force Container Security Lab — Hardened Dockerfile
+# School of AI & Data Science, IIT Jodhpur
+#
+# This container builds a controlled, instrumented environment for
+# studying kernel-level container escape vectors and their mitigations.
+
 FROM ubuntu:20.04
 
-# Avoid prompt during installations
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install essential build tools, gcc, make, capability diagnostics, and process utilities
+# Install build toolchain, capability diagnostics, process utilities,
+# and cron (for Stage 4 cron injection simulation)
 RUN apt-get update && apt-get install -y \
     gcc \
     libc6-dev \
@@ -13,36 +17,44 @@ RUN apt-get update && apt-get install -y \
     curl \
     libcap2-bin \
     procps \
+    bc \
     cron \
     && rm -rf /var/lib/apt/lists/*
 
-# Create target test file for Stage 1 (Dirty COW)
+# Create a root-owned, read-only target file for the COW exploit.
+# chmod 444 = read-only for all users. The exploit attempts to
+# overwrite this file despite lacking write permissions.
 RUN mkdir -p /var/secret && \
     echo "THIS_IS_A_SECRET_KEY_THAT_IS_READ_ONLY" > /var/secret/target.txt && \
     chmod 444 /var/secret/target.txt && \
     chown root:root /var/secret/target.txt
 
-# Create simulated paths for Stage 3 (docker.sock) and Stage 4 (cron host mounts)
+# Simulate commonly misconfigured paths:
+#  - /var/run/docker.sock : Stage 3 tests for exposed Docker daemon socket
+#  - /mnt/host/etc/cron.d : Stage 4 tests for writable host filesystem mounts
 RUN mkdir -p /var/run && \
     touch /var/run/docker.sock && \
     chmod 660 /var/run/docker.sock && \
     chown root:root /var/run/docker.sock && \
     mkdir -p /mnt/host/etc/cron.d
 
-# Create an unprivileged user to perform the exploit
+# Create an unprivileged user to simulate an application compromise.
+# All exploit stages execute under this restricted context.
 RUN useradd -m -s /bin/bash victim
 
-# Copy source code and demo scripts
+# Copy the Hexa Force analysis tools and demo orchestrator
+COPY hexaforce_cow.c /home/victim/hexaforce_cow.c
 COPY dirtyc0w.c /home/victim/dirtyc0w.c
 COPY run_demo.sh /home/victim/run_demo.sh
+COPY benchmark.sh /home/victim/benchmark.sh
 
-# Change ownerships and set execute permissions
+# Set ownership and executable permissions
 RUN chown -R victim:victim /home/victim && \
-    chmod +x /home/victim/run_demo.sh
+    chmod +x /home/victim/run_demo.sh /home/victim/benchmark.sh
 
 # Switch to the low-privileged user environment
 USER victim
 WORKDIR /home/victim
 
-# Default to running all stages sequentially if no arguments are provided
+# Default: run all 4 stages of the security lab
 CMD ["/bin/bash", "/home/victim/run_demo.sh", "--all"]

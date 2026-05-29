@@ -7,12 +7,52 @@
   ],
   "syscalls": [
     {
-      "names": [
-        "madvise"
-      ],
+      "names": ["madvise"],
       "action": "SCMP_ACT_ERRNO",
-      "comment": "Block virtual memory page caching manipulation system calls to neutralize Dirty COW (CVE-2016-5195) exploits.",
-      "args": []
+      "errnoRet": 1,
+      "comment": "LAYER 1 — Neutralize Dirty COW race vector. Blocks the page table discard primitive (MADV_DONTNEED) used by Thread A. Known impact: glibc malloc arena trimming may fall back to brk(). JVM G1/ZGC collectors may show minor GC latency increase. Standard web microservices are unaffected."
+    },
+    {
+      "names": ["ptrace"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 2 — Block process injection. Prevents CAP_SYS_PTRACE abuse for cross-process memory injection (Stage 2 of the Hexa Force threat model). Required for debuggers (gdb, strace) — not needed in production containers."
+    },
+    {
+      "names": ["mount", "umount2"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 3 — Prevent filesystem namespace manipulation. Blocks attackers from remounting filesystems as read-write or creating bind mounts to access host paths. Required only for nested container engines."
+    },
+    {
+      "names": ["unshare"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 4 — Block namespace creation. Prevents creation of new user/mount/PID namespaces from within the container, closing the CVE-2022-0492 cgroup escape vector."
+    },
+    {
+      "names": ["keyctl", "add_key", "request_key"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 5 — Block kernel keyring manipulation. Prevents abuse of the kernel key management facility for privilege escalation (CVE-2016-0728)."
+    },
+    {
+      "names": ["kexec_load", "kexec_file_load"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 6 — Block kernel replacement. Prevents loading a new kernel image from within a container."
+    },
+    {
+      "names": ["init_module", "finit_module", "delete_module"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 7 — Block kernel module operations. Prevents loading or unloading kernel modules, which could introduce rootkits."
+    },
+    {
+      "names": ["acct"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 8 — Block process accounting manipulation. Prevents enabling BSD-style process accounting to host filesystem paths."
     }
   ]
 }
