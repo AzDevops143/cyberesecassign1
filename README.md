@@ -30,13 +30,45 @@ The lab simulates a cascading privilege escalation chain, moving from an unprivi
 
 ```mermaid
 graph TD
-    A[Unprivileged App Compromise] -->|Stage 1: CVE-2016-5195| B(Container Root achieved via Dirty COW)
-    B -->|Stage 2: CAP_SYS_PTRACE| C(Namespace Process Injection)
-    C -->|Stage 3: Exposed docker.sock| D(Docker Daemon API Hijack)
-    D -->|Stage 4: Writable Host Mounts| E[Persistent Host Root via Cron]
-    
-    style A fill:#4a148c,stroke:#333,stroke-width:2px,color:#fff
-    style E fill:#b71c1c,stroke:#333,stroke-width:4px,color:#fff
+    %% Styling Definitions
+    classDef attacker fill:#2d0a31,stroke:#d05ce3,stroke-width:2px,color:#fff,rx:5px,ry:5px
+    classDef boundary fill:none,stroke:#4a4a4a,stroke-width:2px,stroke-dasharray: 5 5,color:#a9a9a9
+    classDef critical fill:#4a0e0e,stroke:#ff5252,stroke-width:2px,color:#fff,rx:5px,ry:5px
+    classDef host fill:#0a192f,stroke:#64ffda,stroke-width:2px,color:#fff,rx:5px,ry:5px
+
+    %% Subgraphs for logical boundaries
+    subgraph Container ["📦 Stage 1: Initial Compromise (Container Namespace)"]
+        direction TB
+        A[Unprivileged User Shell]:::attacker -->|Execute hexaforce_cow| B(Dirty COW Race Condition)
+    end
+
+    subgraph Kernel ["🐧 Stage 2: Kernel Privilege Escalation (Host Kernel)"]
+        direction TB
+        B -->|madvise + /proc/self/mem| C{CVE-2016-5195}:::critical
+        C -->|Overwrite read-only memory| D[Gain Container Root]:::attacker
+    end
+
+    subgraph Lateral ["🔄 Stage 3: Lateral Movement (Process Space)"]
+        direction TB
+        D -->|Abuse CAP_SYS_PTRACE| E[Scan Host PID Namespace]
+        E -->|Inject shellcode| F(Hijack Host Daemon Process)
+    end
+
+    subgraph Infrastructure ["⚙️ Stage 4: Infrastructure Control (Docker Engine)"]
+        direction TB
+        F -->|Access Mounted Socket| G{/var/run/docker.sock}:::critical
+        G -->|API Request| H[Deploy Privileged Sibling Container]:::attacker
+    end
+
+    subgraph Persistence ["💻 Stage 5: Persistent Physical Takeover (Host Filesystem)"]
+        direction TB
+        H -->|Mount Host Root '/'| I[Access /mnt/host]
+        I -->|Inject Payload| J[Overwrite /etc/cron.d/backdoor]:::attacker
+        J ===>|Cron Execution| K((SYSTEM ROOT COMPROMISED)):::critical
+    end
+
+    %% Apply boundary styling
+    class Container,Kernel,Lateral,Infrastructure,Persistence boundary
 ```
 
 ### Attack Vector Analysis Matrix
