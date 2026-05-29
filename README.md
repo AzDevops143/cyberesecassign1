@@ -41,12 +41,12 @@ graph TD
 
 ### Attack Vector Analysis Matrix
 
-| Stage | Security Boundary Compromised | Exploit Vector / Technique | Consequence / Impact |
-| :---: | :--- | :--- | :--- |
-| **01** | **Host Kernel Isolation** | Copy-on-Write (COW) Race Condition (CVE-2016-5195) | Container-root privilege escalation via read-only memory overwrite. |
-| **02** | **Namespace & Capabilities** | Abuse of `CAP_SYS_PTRACE` across shared PID namespaces | Arbitrary code injection into privileged host-level daemon processes. |
-| **03** | **Daemon & API Surface** | Hijacked Unix Socket (`/var/run/docker.sock`) | Raw Docker engine control, enabling unconstrained sibling container spawning. |
-| **04** | **Volume & Filesystem** | Writable Host Mount Escalation (`/mnt/host`) | Persistent physical host takeover via malicious cron job injection. |
+| Stage | Security Boundary Defeated | Exploit Technique (The "How") | Impact (The "So What?") | Educational Takeaway (The "Why") |
+| :---: | :--- | :--- | :--- | :--- |
+| **01** | **Kernel Memory Isolation** | Copy-on-Write (COW) Race Condition (CVE-2016-5195) | **Privilege Escalation:** Attacker gains root inside the container by overwriting read-only system files. | Containers share the host kernel. A kernel-level vulnerability instantly bypasses container boundaries. |
+| **02** | **Process Isolation (Namespaces)** | Capability Abuse (`CAP_SYS_PTRACE`) across shared PID namespaces | **Lateral Movement:** Attacker hijacks and injects code into other processes running on the host machine. | Granting excessive Linux capabilities (like `SYS_PTRACE`) breaks logical process isolation. Principle of Least Privilege was violated. |
+| **03** | **API & Management Surface** | Hijacked Unix Daemon Socket (`/var/run/docker.sock`) | **Infrastructure Control:** Attacker can deploy rogue, malicious sibling containers or delete existing ones. | Mounting the Docker socket exposes the entire container engine API. It is equivalent to handing over root access. |
+| **04** | **Filesystem Integrity** | Writable Host Mount Escalation (`/mnt/host`) | **Total Persistence:** Attacker installs a permanent backdoor (cron job) directly onto the physical host server. | Blindly trusting and mounting writable host directories allows attackers to easily pivot from the container to the physical host filesystem. |
 
 ---
 
