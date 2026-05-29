@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Hexa Force
+#  Hexa Force
 **Advanced Container Security & Containment Architecture Lab**
 
 [![Academic Integrity](https://img.shields.io/badge/Academic_Integrity-Peer_Reviewed-blue.svg)](#)
@@ -15,16 +15,16 @@
 
 ---
 
-## 📖 Overview
+##  Overview
 
 Hexa Force is an **educational integration study and instrumented containment framework** designed for shared-kernel container environments. It models a complete four-stage container breakout exploit chain and demonstrates the efficacy of multi-layered defense mechanisms, including surgical system call filtering (Seccomp BPF) and kernel capability dropping.
 
 This repository accompanies the IEEE-format research paper:  
-> 📜 *"Securing Shared-Kernel Runtimes Against Kernel-Level Container Escapes."*
+>  *"Securing Shared-Kernel Runtimes Against Kernel-Level Container Escapes."*
 
 ---
 
-## ⚔️ The 4-Stage Threat Model
+##  The 4-Stage Threat Model
 
 The lab simulates a cascading privilege escalation chain, moving from an unprivileged container process to persistent physical host control.
 
@@ -46,9 +46,9 @@ graph TD
 
 ---
 
-## 🏗️ Core Architectural Components
+##  Core Architectural Components
 
-### 🔬 1. Hexa Force COW Analysis Tool (`hexaforce_cow.c`)
+###  1. Hexa Force COW Analysis Tool (`hexaforce_cow.c`)
 An independently engineered, multi-mode analysis framework for the CVE-2016-5195 race condition. Unlike simple exploit scripts, this tool provides quantitative telemetry:
 - `--probe`: Non-destructive vulnerability fingerprinting
 - `--exploit`: Controlled race trigger with nanosecond-resolution timing telemetry
@@ -57,21 +57,21 @@ An independently engineered, multi-mode analysis framework for the CVE-2016-5195
 
 > **Attribution:** The fundamental race condition technique (madvise + /proc/self/mem) was first publicly documented by Phil Oester in 2016 at dirtycow.ninja.
 
-### 🛡️ 2. Multi-Layer Seccomp Profile (`hexaforce-seccomp.json`)
+###  2. Multi-Layer Seccomp Profile (`hexaforce-seccomp.json`)
 An original, surgical **8-layer Seccomp BPF profile** that neutralizes the Dirty COW race vector by blocking `madvise` and prevents namespace/filesystem escapes by restricting `ptrace`, `unshare`, and `mount`.
 
-### 📊 3. Empirical Benchmark Suite (`benchmark.sh`)
+###  3. Empirical Benchmark Suite (`benchmark.sh`)
 A utility script that measures the actual performance overhead of the deployed security controls, producing CSV-formatted empirical data on:
 - Container startup latency
 - Exploit containment success rates
 - Trivy scan operational durations
 
-### 🔐 4. Sigstore CI/CD Supply Chain Verification
+###  4. Sigstore CI/CD Supply Chain Verification
 A GitHub Actions workflow (`.github/workflows/dirtycow-lab.yml`) demonstrating automated DevSecOps practices: AquaSec Trivy vulnerability scanning and keyless container signing via Sigstore Cosign and GitHub Actions OIDC.
 
 ---
 
-## 🚀 Usage Guide
+##  Usage Guide
 
 ### Build the Lab Environment
 ```bash
