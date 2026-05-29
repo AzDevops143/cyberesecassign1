@@ -1,7 +1,7 @@
 /*
  * hexaforce_cow.c — Hexa Force COW Race Condition Analysis Tool
  *
- * ORIGINAL WORK: School of AI & Data Science, IIT Jodhpur
+ * Department: School of AI & Data Science, IIT Jodhpur
  * 
  * This tool goes beyond simple exploit reproduction. It implements a
  * structured, multi-mode analysis framework for studying the CVE-2016-5195
