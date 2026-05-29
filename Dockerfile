@@ -44,7 +44,6 @@ RUN useradd -m -s /bin/bash victim
 
 # Copy the Hexa Force analysis tools and demo orchestrator
 COPY hexaforce_cow.c /home/victim/hexaforce_cow.c
-COPY dirtyc0w.c /home/victim/dirtyc0w.c
 COPY run_demo.sh /home/victim/run_demo.sh
 COPY benchmark.sh /home/victim/benchmark.sh
 

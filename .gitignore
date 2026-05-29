@@ -1,0 +1,19 @@
+# TeX/LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Compiled binaries
+hexaforce_cow
+dirtyc0w
+*.o
+*.exe
+
+# Benchmark results
+benchmark_results.csv
