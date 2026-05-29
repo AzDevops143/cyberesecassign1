@@ -36,9 +36,27 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # Step 3: Build and Push Docker Image
-    - name: Build and Push Docker Image
-      id: build-and-push
+    # Step 3: Build Docker Image Locally (for scanning)
+    - name: Build Docker Image Locally
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        load: true
+        tags: ${{ env.IMAGE_TAG }}:temp-scan
+
+    # Step 3.5: Run AquaSec Trivy Vulnerability Scanner
+    - name: Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.IMAGE_TAG }}:temp-scan
+        format: 'table'
+        exit-code: '0'       # Report vulnerabilities without blocking builds since we're analyzing a lab exploit environment
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+
+    # Step 3.8: Push Docker Image to GHCR
+    - name: Push Docker Image to GHCR
       uses: docker/build-push-action@v5
       with:
         context: .
