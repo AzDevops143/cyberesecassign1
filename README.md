@@ -132,14 +132,7 @@ If you wish to customize or rebuild the PowerPoint slide decks or Word guides, m
 # 1. Install prerequisites
 pip install python-pptx python-docx
 
-# 2. Rebuild the widescreen 16:9 dark-mode slide decks (both presentations)
-python generate_ultimate_pptx.py
-
-# 3. Rebuild the presentation companion readout guide (Word document)
-python generate_readout_docx.py
-
-# 4. Inject speaker notes (talk tracks, keywords, and Q&As) into slide decks
-python inject_speaker_notes.py
+ 
 ```
 
 ---
