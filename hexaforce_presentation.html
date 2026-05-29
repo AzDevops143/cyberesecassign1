@@ -93,6 +93,11 @@
             .left .content:hover { transform: scale(1.02) translateX(10px); box-shadow: 15px 15px 40px var(--attack-glow); }
         }
     </style>
+    <!-- Mermaid.js for diagrams -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'dark', sequence: { actorMargin: 20 } });
+    </script>
 </head>
 <body>
     <!-- Particles.js for interactive hacker aesthetic -->
@@ -110,6 +115,26 @@
             <div class="content">
                 <h2>1. The Kernel Exploit</h2>
                 <p>The attacker triggers the Dirty COW race condition (CVE-2016-5195) to overwrite a read-only root file directly from the unprivileged container.</p>
+                <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; margin: 20px 0;">
+                    <pre class="mermaid" style="background: transparent; border: none; margin: 0; padding: 0;">
+sequenceDiagram
+    participant C as Container
+    participant Mem as /proc/self/mem
+    participant K as Host Kernel
+    C->>K: mmap() read-only file
+    par madvise thread
+        loop 
+            C->>Mem: madvise(MADV_DONTNEED)
+        end
+    and write thread
+        loop
+            C->>Mem: write(payload)
+        end
+    end
+    Note over Mem,K: Kernel race condition occurs
+    K-->>K: Writes to underlying physical file!
+                    </pre>
+                </div>
                 <div class="terminal">
                     <span class="term-blue">victim@container:~$</span> ./hexaforce_cow --exploit<br>
                     <span class="term-red">[!]</span> Overwriting /usr/bin/passwd...<br>
