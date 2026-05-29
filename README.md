@@ -39,9 +39,6 @@ This workspace contains exploit source code, orchestration scripts, automated CI
     5. Runs all four lab stages sequentially on the signed image.
 
 ###  Programmatic Slide & Guide Builders
-*   [`generate_ultimate_pptx.py`](file:///d:/Dirty%20cow%20Docker/generate_ultimate_pptx.py): Programmatically builds **both** slide decks from scratch in premium widescreen (16:9) dark-mode canvas templates.
-*   [`generate_readout_docx.py`](file:///d:/Dirty%20cow%20Docker/generate_readout_docx.py): Generates **`Hexa_Force_Presentation_Readout_Guide.docx`**—the ultimate unified speaker companion and talk-track document.
-*   [`inject_speaker_notes.py`](file:///d:/Dirty%20cow%20Docker/inject_speaker_notes.py): Injects verbatim scripts, keywords, and examiner Q&As directly into the notes section of every slide in both presentations.
 *   **Generated Decks & Guides**: 
     *   [`Hexa_Force_Secure_Lab_Presentation.pptx`](file:///d:/Dirty%20cow%20Docker/Hexa_Force_Secure_Lab_Presentation.pptx) (11-slide lab overview)
     *   [`Dirty_COW_Technical_Briefing.pptx`](file:///d:/Dirty%20cow%20Docker/Dirty_COW_Technical_Briefing.pptx) (16-slide technical deep dive)
