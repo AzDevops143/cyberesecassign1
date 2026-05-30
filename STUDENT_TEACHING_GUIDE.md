@@ -48,7 +48,7 @@ Welcome! If you are using this document to present to your classmates, follow th
 
 ## Part 4: Live Demonstration Script
 
-*Run these exact commands on the projector in front of the class.*
+*Charan tej will Run these exact commands on the projector in front of the class.*
 
 ### Step 1: Run the Unmitigated Attack
 **Action:** Type the following command:
