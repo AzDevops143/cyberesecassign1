@@ -77,6 +77,10 @@ jobs:
       run: |
         docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-1
 
+    - name: "Run Stage 1B: Modern Kernel Isolation (Dirty Pipe Exploit)"
+      run: |
+        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-1b
+
     - name: "Run Stage 2: Namespace & Capabilities Isolation"
       run: |
         docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-2
