@@ -5,8 +5,19 @@ Sequence diagrams are used to illustrate the precise chronological order of syst
 
 ---
 
+## 🏛️ Architectural Primitives
+Before reviewing the stages, it is critical to understand the boundaries of the environment:
+*   **Unprivileged Container:** A heavily restricted process space (Namespaces) isolated from the rest of the system.
+*   **Host Kernel:** The core operating system layer shared by *all* containers. If the kernel is compromised, all containers and the host are compromised.
+*   **Page Cache:** A region of Host Kernel memory used to temporarily store disk files for faster access. This is the primary target for modern memory-corruption escapes.
+*   **Seccomp eBPF:** A kernel-level firewall that filters system calls (the instructions the container sends to the kernel) before they execute.
+
+---
+
 ## Stage 1: Dirty COW (CVE-2016-5195)
-**Mechanism:** Exploits a race condition in the page cache using the `madvise` system call.
+*   **Mechanism:** Exploits a race condition in the page cache using the `madvise` system call.
+*   **Severity:** CVSS v3 7.8 (HIGH)
+*   **Vulnerable Kernels:** Linux Kernel < 4.8.3
 
 ### Attack Architecture
 ```mermaid
@@ -34,7 +45,7 @@ sequenceDiagram
     end
     Page-->>Page: 5. Malicious data written to original read-only file!
 ```
-**Explanation:** The attacker opens a read-only file (like passwords) and maps it into virtual memory. By rapidly telling the kernel they "don't need" the memory (madvise) while simultaneously trying to write to it in a parallel thread, the kernel gets confused. This race condition causes the kernel to accidentally write the malicious data into the actual physical read-only file on the host.
+**Explanation:** The attacker opens a read-only file and maps it into virtual memory. By rapidly telling the kernel they "don't need" the memory (`madvise`) while simultaneously trying to write to it, the kernel gets confused. This race condition causes the kernel to accidentally write the malicious data into the physical read-only file on the host.
 
 ### Mitigation Architecture
 ```mermaid
@@ -48,12 +59,15 @@ sequenceDiagram
     Seccomp-->>App: 2. Returns SCMP_ACT_ERRNO (EPERM)
     Note over App,VM: The race condition is structurally impossible to start.
 ```
-**Explanation:** Our Hexa Force firewall uses Seccomp eBPF to monitor all system calls. When it sees the container trying to use the dangerous `madvise` function, it instantly blocks it and returns a "Permission Denied" (EPERM) error. Without `madvise`, the race condition cannot even begin.
+**Explanation:** Hexa Force uses Seccomp eBPF to monitor system calls. When it sees the container trying to use the dangerous `madvise` function, it instantly blocks it and returns a "Permission Denied" (EPERM) error. Without `madvise`, the race condition cannot begin.
+*   **Mitigation Trade-off (Performance/Utility):** Blocking `madvise` entirely can degrade performance for legitimate database applications (like Redis or PostgreSQL) that use it for memory optimization.
 
 ---
 
 ## Stage 1B: Dirty Pipe (CVE-2022-0847)
-**Mechanism:** Exploits uninitialized pipe flags using the `splice` system call.
+*   **Mechanism:** Exploits uninitialized pipe flags using the `splice` system call.
+*   **Severity:** CVSS v3 7.8 (HIGH)
+*   **Vulnerable Kernels:** Linux Kernel 5.8 through 5.16.11
 
 ### Attack Architecture
 ```mermaid
@@ -72,7 +86,7 @@ sequenceDiagram
     App->>Pipe: 6. write(pipe_fd, "malicious_payload")
     Pipe->>Page: 7. Kernel mistakenly writes pipe data directly to page cache!
 ```
-**Explanation:** The attacker creates a network pipe and fills it with data, leaving hidden "flags" active in the kernel. They then use the `splice` command to connect a read-only file to that pipe. Because the kernel forgot to clear those hidden flags, anything the attacker writes into the pipe is mistakenly injected straight into the read-only file on the host.
+**Explanation:** The attacker creates a network pipe, filling it with data to leave hidden "flags" active. They use the `splice` command to connect a read-only file to that pipe. Because the kernel forgot to clear those flags, anything written into the pipe is injected straight into the host's read-only file.
 
 ### Mitigation Architecture
 ```mermaid
@@ -86,12 +100,15 @@ sequenceDiagram
     Seccomp-->>App: 2. Returns SCMP_ACT_ERRNO (EPERM)
     Note over App,VFS: The malicious link between file and pipe is never created.
 ```
-**Explanation:** By applying a Seccomp filter that completely denies access to the `splice` system call, the container is physically incapable of linking the pipe buffer to the file, neutralizing the Dirty Pipe exploit entirely.
+**Explanation:** By applying a Seccomp filter that denies access to the `splice` system call, the container is physically incapable of linking the pipe buffer to the file.
+*   **Mitigation Trade-off (Performance/Utility):** `splice` is heavily used for "zero-copy" network operations. Blocking it may reduce I/O throughput for high-performance web servers (like NGINX or HAProxy).
 
 ---
 
 ## Stage 1C: Copy Fail (CVE-2026-31431)
-**Mechanism:** Exploits cryptographic subsystems using `AF_ALG` sockets.
+*   **Mechanism:** Exploits cryptographic subsystems using `AF_ALG` sockets.
+*   **Severity:** CVSS v3 8.1 (HIGH)
+*   **Vulnerable Kernels:** 2026 Kernel Branches
 
 ### Attack Architecture
 ```mermaid
@@ -109,7 +126,7 @@ sequenceDiagram
     Note over Crypto,Page: Cryptographic memory allocation flaw triggered
     Crypto->>Page: 6. Crypto operation corrupts adjacent page cache memory!
 ```
-**Explanation:** The attacker abuses the Linux kernel's internal cryptography engine. By creating a special socket (`AF_ALG`) and feeding it a malicious encryption key, a bug in the kernel's memory allocation causes the crypto engine to overwrite adjacent memory blocks, corrupting the host page cache.
+**Explanation:** The attacker creates a special socket (`AF_ALG`) to access the Linux kernel's internal cryptography engine. Feeding it a malicious key triggers a memory allocation bug, causing the crypto engine to overwrite adjacent page cache blocks.
 
 ### Mitigation Architecture
 ```mermaid
@@ -123,12 +140,15 @@ sequenceDiagram
     Seccomp-->>App: 2. Returns SCMP_ACT_ERRNO (EPERM)
     Note over App,Socket: Container cannot access kernel crypto modules.
 ```
-**Explanation:** The Hexa Force Seccomp profile looks deep into the `socket` system call. If it detects the container trying to create a socket belonging to family `38` (which is `AF_ALG`), it immediately blocks it, cutting off access to the vulnerable crypto subsystem.
+**Explanation:** Hexa Force's Seccomp profile deep-inspects the `socket` call. If it detects an attempt to create an `AF_ALG` (38) socket, it blocks it.
+*   **Mitigation Trade-off (Performance/Utility):** Blocking `AF_ALG` prevents userspace applications from offloading cryptographic tasks to dedicated hardware (like AES-NI accelerators), increasing CPU load for encryption.
 
 ---
 
 ## Stage 1D: Dirty Frag (CVE-2026-43284)
-**Mechanism:** Exploits IPv6 fragmentation logic via raw sockets.
+*   **Mechanism:** Exploits IPv6 fragmentation logic via raw sockets.
+*   **Severity:** CVSS v3 8.8 (HIGH)
+*   **Vulnerable Kernels:** 2026 Kernel Branches
 
 ### Attack Architecture
 ```mermaid
@@ -144,7 +164,7 @@ sequenceDiagram
     Note over IPv6,Page: Kernel miscalculates fragmentation assembly boundaries
     IPv6->>Page: 4. Packet payload overflows into page cache memory!
 ```
-**Explanation:** The attacker creates a low-level RAW network socket and intentionally sends malformed, fragmented IPv6 packets to the kernel. When the kernel tries to reassemble these broken packets, a calculation error causes the packet data to overflow out of the network buffer and into the host's protected page cache memory.
+**Explanation:** The attacker uses a RAW network socket to send intentionally fragmented IPv6 packets. A calculation error during kernel reassembly causes the packet data to overflow the buffer and corrupt the page cache.
 
 ### Mitigation Architecture
 ```mermaid
@@ -158,12 +178,15 @@ sequenceDiagram
     Seccomp-->>App: 2. Returns SCMP_ACT_ERRNO (EPERM)
     Note over App,Socket: Container cannot craft malformed IPv6 packets.
 ```
-**Explanation:** Normal containers do not need RAW IPv6 networking privileges. Hexa Force intercepts the `socket` call and blocks argument `10` (`AF_INET6`), preventing the attacker from crafting the raw packets required to trigger the overflow.
+**Explanation:** Hexa Force intercepts the `socket` call and blocks argument `10` (`AF_INET6`), preventing raw IPv6 socket creation.
+*   **Mitigation Trade-off (Performance/Utility):** Blocking RAW sockets prevents standard network diagnostic tools (like `ping6` or `traceroute`) from functioning inside the container.
 
 ---
 
 ## Stage 1E: Fragnesia (CVE-2026-46300)
-**Mechanism:** Exploits the ESP-in-TCP Upper Layer Protocol subsystem.
+*   **Mechanism:** Exploits the ESP-in-TCP Upper Layer Protocol subsystem.
+*   **Severity:** CVSS v3 8.1 (HIGH)
+*   **Vulnerable Kernels:** 2026 Kernel Branches
 
 ### Attack Architecture
 ```mermaid
@@ -180,7 +203,7 @@ sequenceDiagram
     Note over ULP: Module fails to sanitize user-space context
     ULP->>TCP: 5. Memory leak/corruption occurs during context switch!
 ```
-**Explanation:** The attacker creates a normal TCP network connection but then attempts to forcefully attach an advanced security protocol (`esp`) to the connection. A bug in how the kernel switches contexts for this protocol causes it to leak memory into the host system.
+**Explanation:** An attacker creates a TCP connection and forces the kernel to attach an advanced security protocol (`esp`) via `setsockopt`. A context-switching bug leaks memory into the host system.
 
 ### Mitigation Architecture
 ```mermaid
@@ -194,12 +217,14 @@ sequenceDiagram
     Seccomp-->>App: 2. Returns SCMP_ACT_ERRNO (EPERM)
     Note over App,TCP: ESP-in-TCP subsystem cannot be invoked.
 ```
-**Explanation:** Hexa Force uses deep argument inspection on the `setsockopt` command. It allows normal network configurations but strictly denies option `31` (`TCP_ULP`), rendering the attacker completely unable to attach the vulnerable `esp` protocol to their socket.
+**Explanation:** Hexa Force strictly denies the `TCP_ULP` option (`31`), physically barring the `esp` protocol attachment.
+*   **Mitigation Trade-off (Performance/Utility):** Prevents containers from utilizing advanced in-kernel TCP offloading capabilities (like kernel TLS or IPSec encapsulation).
 
 ---
 
 ## Stage 2: Namespace & Capabilities Isolation
-**Mechanism:** Exploits excessive privileges (`CAP_SYS_PTRACE`, `--pid=host`) to inject code.
+*   **Mechanism:** Exploits excessive privileges (`CAP_SYS_PTRACE`, `--pid=host`).
+*   **Severity:** Operational Misconfiguration (CRITICAL Risk)
 
 ### Attack Architecture
 ```mermaid
@@ -215,7 +240,7 @@ sequenceDiagram
     Kernel->>HostProcess: 4. Writes malicious shellcode into Host PID 1 memory
     HostProcess-->>HostProcess: 5. Host executes attacker's code as root!
 ```
-**Explanation:** If a container is launched with excessive Linux capabilities (like `SYS_PTRACE`) and shares the host's Process ID space, an attacker inside the container can literally attach a debugger to the host's core operating system processes (PID 1) and force them to execute malicious code.
+**Explanation:** A container with `SYS_PTRACE` privileges can attach a debugger to host processes (PID 1) and force them to execute malware.
 
 ### Mitigation Architecture
 ```mermaid
@@ -229,12 +254,14 @@ sequenceDiagram
     AppArmor-->>App: 2. Returns EPERM (Capability Denied)
     Note over App,Kernel: Cross-namespace process injection is blocked.
 ```
-**Explanation:** By ensuring strict Docker defaults and dropping dangerous capabilities, the container environment strips the attacker of the right to use debugging tools (`ptrace`), making it impossible to latch onto host processes.
+**Explanation:** Enforcing strict Docker defaults and dropping dangerous capabilities neutralizes the attack.
+*   **Mitigation Trade-off (Performance/Utility):** Developers cannot use legitimate debugging tools (`gdb`, `strace`) on running applications inside the container.
 
 ---
 
 ## Stage 3: Daemon API Security
-**Mechanism:** Exploits an exposed `/var/run/docker.sock` to hijack the host daemon.
+*   **Mechanism:** Exploits an exposed `/var/run/docker.sock`.
+*   **Severity:** Operational Misconfiguration (CRITICAL Risk)
 
 ### Attack Architecture
 ```mermaid
@@ -249,7 +276,7 @@ sequenceDiagram
     App->>Sock: 4. POST /containers/{ID}/start
     Daemon->>Daemon: 5. Spawns new container with full root host access!
 ```
-**Explanation:** Sometimes administrators accidentally leave the Docker management socket inside the container. An attacker can simply talk to this socket via HTTP and command the host server to build them a brand new, highly privileged container that has total control over the host.
+**Explanation:** An attacker sends HTTP commands to an exposed Docker socket, instructing the host to build a highly privileged backdoor container.
 
 ### Mitigation Architecture
 ```mermaid
@@ -263,12 +290,14 @@ sequenceDiagram
     Sock-->>App: 2. Returns ENOENT (No such file or directory)
     Note over App,Daemon: The host API is totally unreachable from the container.
 ```
-**Explanation:** The mitigation is architectural isolation. By never mounting the daemon socket into untrusted containers (or by enforcing strictly authenticated TCP/TLS sockets instead of UNIX sockets), the attacker has no physical path to communicate with the host API.
+**Explanation:** Architectural isolation (never mounting the socket) prevents the API connection.
+*   **Mitigation Trade-off (Performance/Utility):** Prevents "Docker-in-Docker" (DinD) architectures heavily used in CI/CD pipelines (like Jenkins or GitLab runners) from functioning.
 
 ---
 
 ## Stage 4: Persistent Mounts & Filesystem
-**Mechanism:** Exploits a writable host directory (e.g., `/etc/cron.d`) mounted into the container.
+*   **Mechanism:** Exploits writable host directories (e.g., `/etc/cron.d`).
+*   **Severity:** Operational Misconfiguration (HIGH Risk)
 
 ### Attack Architecture
 ```mermaid
@@ -282,7 +311,7 @@ sequenceDiagram
     HostCron->>Mount: 2. Reads new backdoor file on next minute tick
     HostCron-->>HostCron: 3. Executes reverse shell as host root!
 ```
-**Explanation:** If a container is given read/write access to sensitive host directories (like the cron job folder), the attacker can just write a text file containing malicious commands. Because the folder is shared, the host operating system immediately sees the file and executes the commands automatically.
+**Explanation:** Writing a malicious file to a shared cron directory forces the host operating system to execute it automatically.
 
 ### Mitigation Architecture
 ```mermaid
@@ -296,12 +325,13 @@ sequenceDiagram
     Mount-->>App: 2. Returns EROFS (Read-only file system)
     Note over App,HostCron: Host filesystem cannot be modified by the container.
 ```
-**Explanation:** The Hexa Force architecture dictates that any host directories mounted into a container must use the Read-Only (`:ro`) flag. This enforces an immutable infrastructure where the attacker is physically blocked from saving their malicious cron jobs to the disk.
+**Explanation:** Applying Read-Only (`:ro`) mount flags enforces an immutable infrastructure.
+*   **Mitigation Trade-off (Performance/Utility):** Applications cannot write state, logs, or cache to disk unless explicitly mapped to temporary memory (`tmpfs`), complicating stateless architectures.
 
 ---
 
 ## Stage 5: MITRE ATT&CK Matrix Visualization
-**Mechanism:** 1 Vulnerability Mechanism -> 4 Distinct Attack Tactics.
+*   **Mechanism:** Translating 1 Vulnerability Mechanism into 4 Distinct Attack Tactics.
 
 ### 4x4 Threat Model Architecture
 ```mermaid
@@ -322,4 +352,4 @@ sequenceDiagram
     Attacker->>Vuln: Run Exploit (Target: T1565)
     Vuln->>T1565: Corrupt critical data
 ```
-**Explanation:** This diagram proves to the classroom that "breaking the kernel" is just the first step. Depending on what file the attacker chooses to overwrite after they break the kernel, they achieve entirely different objectives within the globally recognized MITRE ATT&CK framework—from stealing passwords to destroying applications.
+**Explanation:** This diagram proves that "breaking the kernel" is just the first step. Depending on the targeted file, the attacker achieves entirely different operational objectives defined by the globally recognized MITRE ATT&CK framework.
