@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hexa Force — Dirty COW Attack: End-to-End Implementation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #07090f;
+    --surface:  #0e1119;
+    --panel:    #131620;
+    --card:     #181d2a;
+    --border:   #232840;
+    --border2:  #2e3554;
+    --text:     #e8ecf5;
+    --muted:    #7a85a3;
+    --dim:      #454e6b;
+    --red:      #ff4757;
+    --red-dim:  #3d0e13;
+    --red-mid:  #7a1a22;
+    --green:    #2ed573;
+    --green-dim:#0a2918;
+    --green-mid:#12472b;
+    --blue:     #5dade2;
+    --blue-dim: #0a1e2e;
+    --amber:    #ffa502;
+    --amber-dim:#2a1a00;
+    --purple:   #a29bfe;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── grid noise bg ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(93,173,226,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(93,173,226,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    position: relative; z-index: 10;
+    border-bottom: 1px solid var(--border);
+    background: rgba(7,9,15,0.95);
+    backdrop-filter: blur(12px);
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-mark {
+    width: 42px; height: 42px; border-radius: 10px;
+    border: 1.5px solid var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 14px; font-weight: 700;
+    color: var(--red); letter-spacing: -1px;
+    background: var(--red-dim);
+    flex-shrink: 0;
+  }
+  .header-title { font-size: 18px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .header-sub   { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .header-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px;
+    border: 1px solid;
+  }
+  .badge-red    { color: var(--red);   border-color: var(--red-mid);   background: var(--red-dim); }
+  .badge-green  { color: var(--green); border-color: var(--green-mid); background: var(--green-dim); }
+  .badge-blue   { color: var(--blue);  border-color: #1a3e58;          background: var(--blue-dim); }
+  .badge-amber  { color: var(--amber); border-color: #4a3000;          background: var(--amber-dim); }
+
+  /* ── MAIN LAYOUT ── */
+  .main { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 32px 24px 60px; }
+
+  /* ── SUMMARY STRIP ── */
+  .summary-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 32px;
+  }
+  @media(max-width:600px){ .summary-strip { grid-template-columns: repeat(2,1fr); } }
+  .sum-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .sum-label { font-size: 11px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .sum-val   { font-size: 26px; font-weight: 600; line-height: 1; }
+  .sum-desc  { font-size: 12px; color: var(--muted); }
+
+  /* ── STAGE NAVIGATION ── */
+  .stage-nav {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 10px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:580px){ .stage-nav { grid-template-columns: repeat(2,1fr); } }
+  .sn-btn {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 14px; cursor: pointer;
+    color: var(--muted); transition: all .2s ease;
+    text-align: left; position: relative; overflow: hidden;
+    font-family: var(--sans);
+  }
+  .sn-btn::before {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: currentColor; opacity: 0; transition: opacity .2s;
+  }
+  .sn-btn:hover { border-color: var(--border2); color: var(--text); transform: translateY(-1px); }
+  .sn-btn.active { color: var(--text); border-color: var(--border2); }
+  .sn-btn.active::before { opacity: 1; }
+  .sn-btn.s1.active { --stagecolor: var(--red);   background: linear-gradient(135deg, rgba(255,71,87,.08), var(--card)); }
+  .sn-btn.s2.active { --stagecolor: var(--amber);  background: linear-gradient(135deg, rgba(255,165,2,.08), var(--card)); }
+  .sn-btn.s3.active { --stagecolor: var(--blue);   background: linear-gradient(135deg, rgba(93,173,226,.08), var(--card)); }
+  .sn-btn.s4.active { --stagecolor: var(--green);  background: linear-gradient(135deg, rgba(46,213,115,.08), var(--card)); }
+  .sn-btn.s1.active::before { background: var(--red); }
+  .sn-btn.s2.active::before { background: var(--amber); }
+  .sn-btn.s3.active::before { background: var(--blue); }
+  .sn-btn.s4.active::before { background: var(--green); }
+  .sn-num {
+    font-family: var(--mono); font-size: 22px; font-weight: 700;
+    line-height: 1; margin-bottom: 6px; transition: color .2s;
+  }
+  .s1 .sn-num { color: var(--red); }
+  .s2 .sn-num { color: var(--amber); }
+  .s3 .sn-num { color: var(--blue); }
+  .s4 .sn-num { color: var(--green); }
+  .sn-title { font-size: 13px; font-weight: 500; color: inherit; margin-bottom: 3px; }
+  .sn-sub   { font-size: 11px; font-family: var(--mono); color: var(--dim); }
+
+  /* ── PANELS ── */
+  .panel { display: none; }
+  .panel.active {
+    display: block;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── STAGE HEADER ── */
+  .stage-header {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 22px 24px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 20px;
+  }
+  .stage-icon {
+    width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 16px; font-weight: 700;
+  }
+  .icon-red    { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-mid); }
+  .icon-amber  { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3000; }
+  .icon-blue   { background: var(--blue-dim);  color: var(--blue);  border: 1px solid #1a3e58; }
+  .icon-green  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-mid); }
+  .stage-meta { flex: 1; }
+  .stage-tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .stage-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .stage-desc  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── TWO COLUMN ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media(max-width:768px){ .two-col { grid-template-columns: 1fr; } }
+
+  /* ── SECTION CARD ── */
+  .section-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .sc-header {
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .sc-label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .sc-header.atk { background: rgba(255,71,87,.06); }
+  .sc-header.def { background: rgba(46,213,115,.06); }
+  .sc-dot-atk { background: var(--red); }
+  .sc-dot-def { background: var(--green); }
+  .sc-label-atk { color: var(--red); }
+  .sc-label-def { color: var(--green); }
+  .sc-body { padding: 20px; }
+
+  /* ── FLOW CHAIN ── */
+  .flow-chain {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 18px; padding: 12px 14px;
+    background: var(--surface); border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .fc-node {
+    font-family: var(--mono); font-size: 11px; padding: 5px 10px;
+    border-radius: 6px; border: 1px solid; font-weight: 700;
+    white-space: nowrap;
+  }
+  .fc-atk  { color: var(--red);   border-color: var(--red-mid);  background: var(--red-dim); }
+  .fc-def  { color: var(--green); border-color: var(--green-mid);background: var(--green-dim); }
+  .fc-kern { color: var(--blue);  border-color: #1a3e58;          background: var(--blue-dim); }
+  .fc-warn { color: var(--amber); border-color: #4a3000;          background: var(--amber-dim); }
+  .fc-neu  { color: var(--muted); border-color: var(--border2);   background: var(--panel); }
+  .fc-arrow { color: var(--dim); font-size: 14px; font-weight: 700; }
+  .fc-blocked { text-decoration: line-through; opacity: 0.5; }
+
+  /* ── STEPS LIST ── */
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 0; }
+  .step-item {
+    display: flex; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .step-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .step-circle {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .sc-atk { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red-mid); }
+  .sc-def { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-mid); }
+  .step-text { font-size: 13px; line-height: 1.65; color: var(--muted); }
+  .step-text strong { color: var(--text); font-weight: 500; }
+  .step-text code {
+    font-family: var(--mono); font-size: 11px; padding: 1px 6px;
+    border-radius: 4px; background: var(--surface); color: var(--blue);
+    border: 1px solid var(--border); white-space: nowrap;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    font-family: var(--mono); font-size: 12px; line-height: 1.8;
+    padding: 14px 16px; border-radius: 10px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--muted); margin-top: 16px; word-break: break-all;
+    position: relative; overflow-x: auto;
+  }
+  .code-block .cmd  { color: var(--blue); }
+  .code-block .flag { color: var(--amber); }
+  .code-block .val  { color: var(--green); }
+  .code-block .cmt  { color: var(--dim); }
+  .code-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--dim);
+    margin-bottom: 6px; margin-top: 16px;
+  }
+
+  /* ── ATTACK FLOW DIAGRAM (SVG-based) ── */
+  .diagram-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; margin-bottom: 20px;
+  }
+  .diagram-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+  }
+
+  /* ── FULL CHAIN SECTION ── */
+  .chain-section {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; margin-bottom: 20px;
+  }
+  .chain-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+  }
+  .chain-steps {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+  }
+  .chain-node {
+    flex: 1; min-width: 100px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 12px; text-align: center;
+    position: relative;
+  }
+  .chain-node-num {
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    margin-bottom: 6px;
+  }
+  .chain-node-title {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    margin-bottom: 4px; line-height: 1.3;
+  }
+  .chain-node-sub { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .chain-node.cn1 { border-color: var(--red-mid);  background: rgba(255,71,87,.05); }
+  .chain-node.cn2 { border-color: #4a3000;          background: rgba(255,165,2,.05); }
+  .chain-node.cn3 { border-color: #1a3e58;          background: rgba(93,173,226,.05); }
+  .chain-node.cn4 { border-color: var(--green-mid); background: rgba(46,213,115,.05); }
+  .chain-arrow { font-size: 16px; color: var(--dim); padding: 0 6px; flex-shrink: 0; }
+
+  /* ── MITIGATION TABLE ── */
+  .mit-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .mit-table th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--dim);
+    padding: 10px 12px; text-align: left;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .mit-table td {
+    font-size: 13px; color: var(--muted); padding: 11px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top; line-height: 1.55;
+  }
+  .mit-table tr:last-child td { border-bottom: none; }
+  .mit-table td:first-child { font-family: var(--mono); font-size: 11px; color: var(--red); }
+  .mit-table td:nth-child(2) { color: var(--text); }
+  .mit-table td:nth-child(3) { color: var(--green); }
+  .risk-pill {
+    display: inline-block; font-family: var(--mono); font-size: 10px;
+    padding: 2px 8px; border-radius: 4px; font-weight: 700;
+  }
+  .risk-crit { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-mid); }
+  .risk-high { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3000; }
+  .risk-med  { background: var(--blue-dim); color: var(--blue); border: 1px solid #1a3e58; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar-wrap { margin-bottom: 28px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    margin-bottom: 8px;
+  }
+  .progress-track {
+    height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 2px; background: var(--red);
+    transition: width .4s ease, background .4s ease;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border); padding: 24px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    position: relative; z-index: 1;
+  }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    white-space: nowrap; background: #1e2430; color: var(--text);
+    padding: 5px 10px; border-radius: 6px; font-size: 11px;
+    pointer-events: none; opacity: 0; transition: opacity .15s;
+    border: 1px solid var(--border2); z-index: 999;
+    font-family: var(--mono);
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  /* ── NAV BUTTONS ── */
+  .nav-row {
+    display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px;
+  }
+  .nav-btn {
+    font-family: var(--mono); font-size: 12px; padding: 9px 20px;
+    border-radius: 8px; border: 1px solid var(--border2); cursor: pointer;
+    background: var(--card); color: var(--text); transition: all .15s;
+    font-weight: 700; letter-spacing: 0.5px;
+  }
+  .nav-btn:hover { background: var(--panel); border-color: var(--muted); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav-btn.primary { background: var(--red-dim); border-color: var(--red-mid); color: var(--red); }
+  .nav-btn.primary:hover { background: rgba(255,71,87,.2); }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">HF</div>
+    <div>
+      <div class="header-title">Hexa Force — Dirty COW Attack</div>
+      <div class="header-sub">END-TO-END IMPLEMENTATION  ·  G25AIT2026  ·  IIT JODHPUR</div>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-red">CVE-2016-5195</span>
+    <span class="badge badge-green">4 STAGES</span>
+    <span class="badge badge-blue">SECCOMP BPF</span>
+    <span class="badge badge-amber">DOCKER</span>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- SUMMARY STRIP -->
+  <div class="summary-strip">
+    <div class="sum-card">
+      <div class="sum-label">Attack stages</div>
+      <div class="sum-val" style="color:var(--red)">4</div>
+      <div class="sum-desc">Cascading escalation chain</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">CVE</div>
+      <div class="sum-val" style="font-size:17px; padding-top:4px; color:var(--blue)">2016-5195</div>
+      <div class="sum-desc">Dirty COW kernel race</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Defense layers</div>
+      <div class="sum-val" style="color:var(--green)">6</div>
+      <div class="sum-desc">Kernel + runtime + CI/CD</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Startup overhead</div>
+      <div class="sum-val" style="color:var(--amber)">~10%</div>
+      <div class="sum-desc">Full hardened stack</div>
+    </div>
+  </div>
+
+  <!-- ATTACK CHAIN OVERVIEW -->
+  <div class="chain-section">
+    <div class="chain-title">▸ Full Attack Chain Overview</div>
+    <div class="chain-steps">
+      <div class="chain-node cn1">
+        <div class="chain-node-num">S1</div>
+        <div class="chain-node-title">Dirty COW</div>
+        <div class="chain-node-sub">Kernel race → container root</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node cn2">
+        <div class="chain-node-num">S2</div>
+        <div class="chain-node-title">PTRACE Abuse</div>
+        <div class="chain-node-sub">Shellcode → host process</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node cn3">
+        <div class="chain-node-num">S3</div>
+        <div class="chain-node-title">Socket Hijack</div>
+        <div class="chain-node-sub">Docker API → God-mode</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node cn4">
+        <div class="chain-node-num">S4</div>
+        <div class="chain-node-title">FS Persistence</div>
+        <div class="chain-node-sub">Host mount → cron backdoor</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE NAVIGATION -->
+  <div class="stage-nav">
+    <button class="sn-btn s1 active" onclick="showStage(1)">
+      <div class="sn-num">01</div>
+      <div class="sn-title">Dirty COW Kernel Exploit</div>
+      <div class="sn-sub">CVE-2016-5195</div>
+    </button>
+    <button class="sn-btn s2" onclick="showStage(2)">
+      <div class="sn-num">02</div>
+      <div class="sn-title">PTRACE Process Injection</div>
+      <div class="sn-sub">Namespace bypass</div>
+    </button>
+    <button class="sn-btn s3" onclick="showStage(3)">
+      <div class="sn-num">03</div>
+      <div class="sn-title">Docker API Hijack</div>
+      <div class="sn-sub">Socket exploitation</div>
+    </button>
+    <button class="sn-btn s4" onclick="showStage(4)">
+      <div class="sn-num">04</div>
+      <div class="sn-title">Filesystem Pivot</div>
+      <div class="sn-sub">Persistent takeover</div>
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span id="prog-label">Stage 1 of 4 — Dirty COW Kernel Exploit</span>
+      <span id="prog-pct">25%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="prog-fill" style="width:25%"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ STAGE 1 ═══════════════════ -->
+  <div class="panel active" id="panel-1">
+    <div class="stage-header">
+      <div class="stage-icon icon-red">S1</div>
+      <div class="stage-meta">
+        <div class="stage-tag">Stage 01 · Kernel Memory Exploit</div>
+        <div class="stage-title">Dirty COW — CVE-2016-5195</div>
+        <div class="stage-desc">A race condition in the Linux kernel's Copy-On-Write mechanism allows an unprivileged attacker inside a container to overwrite any read-only file on the physical host disk, instantly gaining root privileges.</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- ATTACK -->
+      <div class="section-card">
+        <div class="sc-header atk">
+          <div class="sc-dot sc-dot-atk"></div>
+          <div class="sc-label sc-label-atk">Attack Vector</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-kern">Shared kernel</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">mmap() R/O file</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Race condition</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-warn">Root!</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-atk">1</div>
+              <div class="step-text">Attacker opens a <strong>read-only system file</strong> (e.g. <code>/usr/bin/passwd</code>) and maps it into virtual memory using <code>mmap(PROT_READ, MAP_PRIVATE)</code> — the kernel creates a safe private copy</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">2</div>
+              <div class="step-text"><strong>Thread 1</strong> calls <code>madvise(MADV_DONTNEED)</code> in a tight loop — continuously discarding the kernel's temporary copy of the mapping</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">3</div>
+              <div class="step-text"><strong>Thread 2</strong> writes a malicious payload through <code>/proc/self/mem</code> — targeting the same memory region</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">4</div>
+              <div class="step-text">Race window hit: kernel's fault handler gets confused — the temporary copy was discarded by Thread 1 mid-write, so the kernel writes the payload <strong>directly to the physical read-only file on disk</strong></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">5</div>
+              <div class="step-text">Critical system file overwritten. Attacker now has <strong>root privileges inside the container</strong> — container boundary shattered at the kernel layer</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- MITIGATION -->
+      <div class="section-card">
+        <div class="sc-header def">
+          <div class="sc-dot sc-dot-def"></div>
+          <div class="sc-label sc-label-def">Mitigation — Seccomp BPF</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-atk fc-blocked">madvise()</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">Seccomp eBPF</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-warn">EPERM</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">Race impossible</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-def">1</div>
+              <div class="step-text"><strong>Interception layer:</strong> A custom <code>hexaforce-seccomp.json</code> profile is injected into the kernel's <strong>eBPF engine</strong> — acting as a high-speed firewall for syscalls</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">2</div>
+              <div class="step-text">When Thread 1 attempts <code>madvise(MADV_DONTNEED)</code>, the request hits the Seccomp filter <strong>before reaching the memory manager</strong></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">3</div>
+              <div class="step-text">Profile flags <code>madvise</code> as <code>SCMP_ACT_ERRNO</code> — the call is dropped and returns <code>EPERM</code> instantly</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">4</div>
+              <div class="step-text">Thread 2's writes now only touch the <strong>private memory copy</strong> — the physical read-only file remains completely safe</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">5</div>
+              <div class="step-text">Race condition physically cannot occur. Container boundary remains intact at the kernel level</div>
+            </li>
+          </ul>
+          <div class="code-label">Implementation Command</div>
+          <div class="code-block">
+            <span class="cmd">docker run</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--security-opt</span> <span class="val">seccomp=hexaforce-seccomp.json</span> \<br>
+            &nbsp;&nbsp;<span class="flag">-it</span> vulnerable_image /bin/bash
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ STAGE 2 ═══════════════════ -->
+  <div class="panel" id="panel-2">
+    <div class="stage-header">
+      <div class="stage-icon icon-amber">S2</div>
+      <div class="stage-meta">
+        <div class="stage-tag">Stage 02 · Lateral Movement</div>
+        <div class="stage-title">CAP_SYS_PTRACE — Process Namespace Bypass</div>
+        <div class="stage-desc">With root inside the container, the attacker abuses a shared PID namespace and the ptrace capability to scan host processes, inject shellcode, and escape the container entirely.</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="sc-header atk">
+          <div class="sc-dot sc-dot-atk"></div>
+          <div class="sc-label sc-label-atk">Attack Vector</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-warn">--pid=host</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Scan /proc</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">ptrace attach</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Shellcode runs</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-atk">1</div>
+              <div class="step-text">Container was launched with <code>--pid=host</code> — the container shares the <strong>host's full PID namespace</strong>. Attacker can see and interact with every process on the bare-metal server via <code>/proc</code></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">2</div>
+              <div class="step-text">Attacker (now root from Stage 1) scans <code>/proc</code> to identify a high-value host process: orchestration agent, syslog daemon, cron</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">3</div>
+              <div class="step-text"><code>ptrace(PTRACE_ATTACH)</code> is called on the target — the host process <strong>freezes</strong> instantly. <code>CAP_SYS_PTRACE</code> grants full control over its memory and CPU registers</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">4</div>
+              <div class="step-text">Malicious shellcode is written into the target's memory via <code>PTRACE_POKEDATA</code> — overwriting legitimate code</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">5</div>
+              <div class="step-text"><code>PTRACE_CONT</code> resumes execution. The host process now runs the attacker's shellcode <strong>natively on bare-metal</strong>, outside Docker/Kubernetes boundaries</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="sc-header def">
+          <div class="sc-dot sc-dot-def"></div>
+          <div class="sc-label sc-label-def">Mitigation — Capability Dropping</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-def">Strict PID ns</span>
+            <span class="fc-arrow">+</span>
+            <span class="fc-node fc-atk fc-blocked">ptrace()</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">LSM blocks</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-warn">EPERM</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-def">1</div>
+              <div class="step-text"><strong>PID namespace isolation:</strong> Docker's default strict PID namespace means the container only sees its own processes. Host processes are <strong>completely invisible</strong> — attacker's <code>/proc</code> scan finds nothing</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">2</div>
+              <div class="step-text"><code>--cap-drop=ALL</code> strips every Linux capability from the container — including <code>CAP_SYS_PTRACE</code> — from the bounding set at launch time</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">3</div>
+              <div class="step-text">When <code>ptrace()</code> is called, the <strong>Linux Security Module (LSM)</strong> intercepts and checks the capability bounding set — <code>CAP_SYS_PTRACE</code> is absent</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">4</div>
+              <div class="step-text">Syscall is terminated with <code>EPERM</code> before any target process is touched. The attacker is a <strong>neutered root</strong> — technically "root" but without the kernel-level powers needed for injection</div>
+            </li>
+          </ul>
+          <div class="code-label">Implementation Command</div>
+          <div class="code-block">
+            <span class="cmd">docker run</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--cap-drop=ALL</span> \<br>
+            &nbsp;&nbsp;<span class="cmt"># Do NOT use --pid=host</span><br>
+            &nbsp;&nbsp;<span class="flag">-it</span> vulnerable_image /bin/bash
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ STAGE 3 ═══════════════════ -->
+  <div class="panel" id="panel-3">
+    <div class="stage-header">
+      <div class="stage-icon icon-blue">S3</div>
+      <div class="stage-meta">
+        <div class="stage-tag">Stage 03 · API Surface Attack</div>
+        <div class="stage-title">Docker Daemon API Hijacking via Socket</div>
+        <div class="stage-desc">A mounted Docker socket gives the attacker unauthenticated HTTP access to the entire container engine running as root on the host — effectively handing over "God-mode" over the entire node.</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="sc-header atk">
+          <div class="sc-dot sc-dot-atk"></div>
+          <div class="sc-label sc-label-atk">Attack Vector</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-warn">docker.sock mounted</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">curl unix-socket</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Docker API (no auth)</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Deploy containers</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-atk">1</div>
+              <div class="step-text">A DevOps convenience flag mounts the host's Docker socket: <code>-v /var/run/docker.sock:/var/run/docker.sock</code> — this socket is the <strong>literal control plane for the entire Docker daemon</strong></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">2</div>
+              <div class="step-text">Attacker discovers the socket file inside the container and recognizes it as the Docker control interface</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">3</div>
+              <div class="step-text">The Docker socket speaks <strong>plain unauthenticated HTTP</strong> over a Unix domain socket — anyone who can write to it has full daemon access</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">4</div>
+              <div class="step-text">Using <code>curl --unix-socket /var/run/docker.sock</code>, attacker sends JSON payloads to download images, delete production containers, or deploy rogue privileged ones</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">5</div>
+              <div class="step-text">Docker engine (running as root) <strong>blindly obeys</strong>. Attacker controls the entire node's container ecosystem</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="sc-header def">
+          <div class="sc-dot sc-dot-def"></div>
+          <div class="sc-label sc-label-def">Mitigation — Socket Isolation + mTLS</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-def">No socket mount</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk fc-blocked">curl → sock</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">File not found</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-def">1</div>
+              <div class="step-text"><strong>Primary fix — air-gap the control plane:</strong> Simply omit <code>-v /var/run/docker.sock</code>. The socket file does not exist inside the container. Mount namespace isolation makes the host's <code>/var/run</code> completely invisible</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">2</div>
+              <div class="step-text">Attacker's <code>curl</code> commands return "Connection Refused" — the Docker engine is invisible and unreachable from inside the container</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">3</div>
+              <div class="step-text"><strong>Fallback for CI/CD runners</strong> that need Docker API: configure daemon to listen on a TLS TCP port with <strong>Mutual TLS (mTLS)</strong> authentication</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">4</div>
+              <div class="step-text">Container must present a valid signed client certificate. Attacker without private keys receives a hard <code>403 Forbidden</code> — even if they find the API endpoint</div>
+            </li>
+          </ul>
+          <div class="code-label">Safe Launch — No Socket Mount</div>
+          <div class="code-block">
+            <span class="cmt"># NEVER do this for untrusted containers:</span><br>
+            <span class="cmt"># -v /var/run/docker.sock:/var/run/docker.sock</span><br><br>
+            <span class="cmd">docker run</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--network</span>=<span class="val">none</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--cap-drop=ALL</span> \<br>
+            &nbsp;&nbsp;<span class="flag">-it</span> vulnerable_image /bin/bash
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ STAGE 4 ═══════════════════ -->
+  <div class="panel" id="panel-4">
+    <div class="stage-header">
+      <div class="stage-icon icon-green">S4</div>
+      <div class="stage-meta">
+        <div class="stage-tag">Stage 04 · Filesystem Persistence</div>
+        <div class="stage-title">Persistent Host Takeover via Filesystem Pivot</div>
+        <div class="stage-desc">Using hijacked API access from Stage 3, the attacker spawns a privileged sibling container with the host's entire filesystem mounted inside it, then plants a permanent cron backdoor that survives container deletion.</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <div class="sc-header atk">
+          <div class="sc-dot sc-dot-atk"></div>
+          <div class="sc-label sc-label-atk">Attack Vector</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-atk">Spawn sibling container</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-warn">-v /:/mnt/host</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Write cron.d</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-atk">Persistent shell</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-atk">1</div>
+              <div class="step-text">Using Docker API control from Stage 3, attacker commands the host daemon to spawn a new <strong>privileged sibling container</strong> next to the original one</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">2</div>
+              <div class="step-text">The new container is created with <code>-v /:/mnt/host</code> — a bind mount that attaches the <strong>entire physical host filesystem</strong> inside the container at <code>/mnt/host</code></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">3</div>
+              <div class="step-text">Docker daemon runs as root and <strong>bypasses standard Linux file permissions</strong> — the disk is mounted with full read/write access</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">4</div>
+              <div class="step-text">Attacker navigates to <code>/mnt/host/etc/cron.d/</code> — which is actually the <strong>host's real system cron folder</strong> — and drops a reverse shell script file</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-atk">5</div>
+              <div class="step-text">Host's cron daemon wakes up, finds the new task, and <strong>executes it as root</strong>. Backdoor persists permanently — even if all containers are deleted and Docker is reinstalled</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="sc-header def">
+          <div class="sc-dot sc-dot-def"></div>
+          <div class="sc-label sc-label-def">Mitigation — Read-Only Immutable FS</div>
+        </div>
+        <div class="sc-body">
+          <div class="flow-chain">
+            <span class="fc-node fc-atk fc-blocked">echo → cron.d</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">VFS intercepts</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-warn">EROFS</span>
+            <span class="fc-arrow">→</span>
+            <span class="fc-node fc-def">Zero persistence</span>
+          </div>
+          <ul class="steps">
+            <li class="step-item">
+              <div class="step-circle sc-def">1</div>
+              <div class="step-text"><strong>Immutable containers:</strong> The <code>--read-only</code> flag tells the kernel's <strong>Virtual File System (VFS)</strong> layer that nothing inside the container environment is allowed to be modified</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">2</div>
+              <div class="step-text">When the attacker's <code>echo</code> command attempts to write to <code>/mnt/host/etc/cron.d/</code>, the VFS intercepts the write operation and sees the Read-Only flag</div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">3</div>
+              <div class="step-text">Write is terminated at the lowest kernel level with <code>EROFS</code> (Read-only file system). <strong>The malicious file is never created</strong></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">4</div>
+              <div class="step-text">Legitimate write needs (logs, temp files) are handled via <code>--tmpfs /tmp</code> — isolated in-memory volumes that <strong>never reach the host filesystem</strong></div>
+            </li>
+            <li class="step-item">
+              <div class="step-circle sc-def">5</div>
+              <div class="step-text">Container restart wipes all in-memory state. Attacker is <strong>instantly evicted</strong> with zero persistence — host cron directory remains clean</div>
+            </li>
+          </ul>
+          <div class="code-label">Implementation Command</div>
+          <div class="code-block">
+            <span class="cmd">docker run</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--read-only</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--tmpfs</span> <span class="val">/tmp</span> \<br>
+            &nbsp;&nbsp;<span class="flag">--cap-drop=ALL</span> \<br>
+            &nbsp;&nbsp;<span class="flag">-it</span> vulnerable_image /bin/bash
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ SECCOMP TABLE ═══════════════════ -->
+  <div class="diagram-card" id="seccomp-section">
+    <div class="diagram-title">▸ Seccomp BPF Profile — Syscall Blocking Matrix</div>
+    <table class="mit-table">
+      <thead>
+        <tr>
+          <th>Syscall</th>
+          <th>Attack Stage Blocked</th>
+          <th>Mechanism</th>
+          <th>Risk Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-tip="Copy-On-Write race enabler">madvise</td>
+          <td>Stage 1 — Dirty COW</td>
+          <td>Removes MADV_DONTNEED for COW race window</td>
+          <td><span class="risk-pill risk-crit">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Cross-process memory access">ptrace</td>
+          <td>Stage 2 — PTRACE abuse</td>
+          <td>Blocks attaching to any external process</td>
+          <td><span class="risk-pill risk-crit">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Namespace pivot">unshare</td>
+          <td>Stage 2 — Namespace escape</td>
+          <td>Prevents creation of new user/PID namespaces</td>
+          <td><span class="risk-pill risk-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Filesystem remount">mount</td>
+          <td>Stage 4 — FS pivot</td>
+          <td>Disables filesystem bind-mounting from inside</td>
+          <td><span class="risk-pill risk-crit">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td data-tip="New namespace creation">clone</td>
+          <td>Stage 2 — Namespace</td>
+          <td>Restricts CLONE_NEWUSER / CLONE_NEWPID flags</td>
+          <td><span class="risk-pill risk-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Set user ID">setuid</td>
+          <td>Stage 1 — Privilege re-escalation</td>
+          <td>Prevents switching to higher privilege UID</td>
+          <td><span class="risk-pill risk-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Set group ID">setgid</td>
+          <td>Stage 1 — Group escalation</td>
+          <td>Prevents group-level privilege change</td>
+          <td><span class="risk-pill risk-med">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td data-tip="Root filesystem pivot">pivot_root</td>
+          <td>Stage 4 — FS pivot</td>
+          <td>Blocks root filesystem replacement attacks</td>
+          <td><span class="risk-pill risk-high">HIGH</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- NAV BUTTONS -->
+  <div class="nav-row">
+    <button class="nav-btn" id="btn-prev" onclick="navigate(-1)" disabled>← Prev Stage</button>
+    <button class="nav-btn primary" id="btn-next" onclick="navigate(1)">Next Stage →</button>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <span>HEXA FORCE  ·  G25AIT2026  ·  School of AI & Data Science, IIT Jodhpur</span>
+  <span>github.com/AzDevops143/cyberesecassign1  ·  May 2026</span>
+</footer>
+
+<script>
+  var current = 1;
+  var total = 4;
+
+  var stageData = {
+    1: { label: 'Stage 1 of 4 — Dirty COW Kernel Exploit', pct: 25,  fillColor: '#ff4757' },
+    2: { label: 'Stage 2 of 4 — PTRACE Process Injection', pct: 50,  fillColor: '#ffa502' },
+    3: { label: 'Stage 3 of 4 — Docker API Hijacking',     pct: 75,  fillColor: '#5dade2' },
+    4: { label: 'Stage 4 of 4 — Filesystem Pivot',         pct: 100, fillColor: '#2ed573' },
+  };
+
+  function showStage(n) {
+    // Hide all panels
+    for (var i = 1; i <= total; i++) {
+      document.getElementById('panel-' + i).classList.remove('active');
+      document.querySelectorAll('.sn-btn')[i - 1].classList.remove('active');
+    }
+    // Show target
+    document.getElementById('panel-' + n).classList.add('active');
+    document.querySelectorAll('.sn-btn')[n - 1].classList.add('active');
+
+    // Update progress
+    var d = stageData[n];
+    document.getElementById('prog-label').textContent = d.label;
+    document.getElementById('prog-pct').textContent = d.pct + '%';
+    var fill = document.getElementById('prog-fill');
+    fill.style.width = d.pct + '%';
+    fill.style.background = d.fillColor;
+
+    // Update nav buttons
+    document.getElementById('btn-prev').disabled = (n === 1);
+    document.getElementById('btn-next').disabled = (n === total);
+    document.getElementById('btn-next').textContent = n === total ? '✓ Complete' : 'Next Stage →';
+
+    current = n;
+
+    // Scroll to top of main smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function navigate(dir) {
+    var next = current + dir;
+    if (next >= 1 && next <= total) showStage(next);
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   navigate(-1);
+    if (e.key === '1') showStage(1);
+    if (e.key === '2') showStage(2);
+    if (e.key === '3') showStage(3);
+    if (e.key === '4') showStage(4);
+  });
+</script>
+</body>
+</html>
