@@ -114,6 +114,16 @@ jobs:
         IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
         docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1e
 
+  test-mitre-matrix:
+    name: Stage 5 - MITRE Matrix
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run MITRE ATT&CK and D3FEND Matrix
+      run: |
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-5
+
   test-capabilities:
     name: Stage 2 - Capabilities
     needs: build-and-sign
