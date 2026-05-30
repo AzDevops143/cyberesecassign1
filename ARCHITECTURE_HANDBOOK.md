@@ -2,6 +2,7 @@
 
 This document provides visual architectural sequence diagrams for all 9 stages of the Hexa Force Containment Lab. 
 Sequence diagrams are used to illustrate the precise chronological order of system calls, thread execution, and kernel subsystem interactions that lead to container escapes, as well as the exact interception points of the Hexa Force mitigation architecture.
+I used Mermaid coding for the architecture design
 
 ---
 
