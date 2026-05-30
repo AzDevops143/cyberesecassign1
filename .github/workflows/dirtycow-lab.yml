@@ -94,6 +94,26 @@ jobs:
         IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
         docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1c
 
+  test-dirty-frag:
+    name: Stage 1D - Dirty Frag
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run IPv6 Frag Escape (CVE-2026-43284)
+      run: |
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1d
+
+  test-fragnesia:
+    name: Stage 1E - Fragnesia
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run ESP-in-TCP Escape (CVE-2026-46300)
+      run: |
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1e
+
   test-capabilities:
     name: Stage 2 - Capabilities
     needs: build-and-sign

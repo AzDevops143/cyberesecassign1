@@ -46,6 +46,8 @@ RUN useradd -m -s /bin/bash victim
 COPY hexaforce_cow.c /home/victim/hexaforce_cow.c
 COPY hexaforce_pipe.c /home/victim/hexaforce_pipe.c
 COPY hexaforce_copyfail.c /home/victim/hexaforce_copyfail.c
+COPY hexaforce_dirtyfrag.c /home/victim/hexaforce_dirtyfrag.c
+COPY hexaforce_fragnesia.c /home/victim/hexaforce_fragnesia.c
 COPY run_demo.sh /home/victim/run_demo.sh
 COPY benchmark.sh /home/victim/benchmark.sh
 

@@ -32,6 +32,32 @@
       "comment": "LAYER 1C — Neutralize Copy Fail (CVE-2026-31431). Blocks creation of AF_ALG (38) userspace crypto sockets."
     },
     {
+      "names": ["socket"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "args": [
+        {
+          "index": 0,
+          "value": 10,
+          "op": "SCMP_CMP_EQ"
+        }
+      ],
+      "comment": "LAYER 1D — Neutralize Dirty Frag (CVE-2026-43284). Blocks creation of AF_INET6 (10) IPv6 sockets to prevent cache fragmentation attacks."
+    },
+    {
+      "names": ["setsockopt"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "args": [
+        {
+          "index": 2,
+          "value": 31,
+          "op": "SCMP_CMP_EQ"
+        }
+      ],
+      "comment": "LAYER 1E — Neutralize Fragnesia (CVE-2026-46300). Blocks setsockopt targeting TCP_ULP (31) to prevent ESP-in-TCP subsystem cache corruption."
+    },
+    {
       "names": ["ptrace"],
       "action": "SCMP_ACT_ERRNO",
       "errnoRet": 1,

@@ -164,6 +164,84 @@ stage_1C() {
     echo ""
 }
 
+stage_1D() {
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo -e "${MAGENTA}  STAGE 1D: Network Cache Exploitation (Dirty Frag CVE-2026-43284) ${NC}"
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo ""
+    
+    # 1. Concept
+    echo -e "${YELLOW}[1. THE PILLAR: IPv6 Fragmentation Paths]${NC}"
+    echo -e "  Dirty Frag (2026) combines page-cache corruption with networking."
+    echo -e "  By opening an IPv6 RAW socket, an attacker can manipulate network"
+    echo -e "  fragmentation to trigger a kernel race condition."
+    echo ""
+
+    # 2. Compilation
+    echo -e "${YELLOW}[2. THE PROBE: IPv6 Fragmentation Vulnerability]${NC}"
+    gcc -O2 hexaforce_dirtyfrag.c -o hexaforce_dirtyfrag 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  - Compiled Hexa Force Dirty Frag Structural Exploit successfully."
+        echo ""
+    else
+        echo -e "  - ${RED}Compilation failed!${NC}"
+    fi
+
+    # 3. Exploit
+    echo -e "${YELLOW}[3. THE EXPLOIT: IPv6 RAW Socket Binding]${NC}"
+    if [ -f "./hexaforce_dirtyfrag" ]; then
+        ./hexaforce_dirtyfrag
+    else
+        echo -e "  - ${RED}Hexa Force Dirty Frag tool failed to compile!${NC}"
+    fi
+    echo ""
+
+    # 4. Mitigation
+    echo -e "${YELLOW}[4. MITIGATION BLUEPRINT: Seccomp eBPF for AF_INET6]${NC}"
+    echo -e "  - ${GREEN}Primary: Upgrade host kernel to include the patch.${NC}"
+    echo -e "  - Secondary: Apply Seccomp profile blocking 'socket' syscalls for AF_INET6 (IPv6) RAW sockets."
+    echo ""
+}
+
+stage_1E() {
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo -e "${MAGENTA}  STAGE 1E: Subsystem Exploitation (Fragnesia CVE-2026-46300) ${NC}"
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo ""
+    
+    # 1. Concept
+    echo -e "${YELLOW}[1. THE PILLAR: ESP-in-TCP Subsystem]${NC}"
+    echo -e "  Fragnesia (2026) is the current state-of-the-art variant."
+    echo -e "  It exploits the Encapsulating Security Payload (ESP) over TCP subsystem"
+    echo -e "  via the setsockopt(TCP_ULP) syscall."
+    echo ""
+
+    # 2. Compilation
+    echo -e "${YELLOW}[2. THE PROBE: ESP-in-TCP Vulnerability]${NC}"
+    gcc -O2 hexaforce_fragnesia.c -o hexaforce_fragnesia 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  - Compiled Hexa Force Fragnesia Structural Exploit successfully."
+        echo ""
+    else
+        echo -e "  - ${RED}Compilation failed!${NC}"
+    fi
+
+    # 3. Exploit
+    echo -e "${YELLOW}[3. THE EXPLOIT: setsockopt(TCP_ULP) ESP Attachment]${NC}"
+    if [ -f "./hexaforce_fragnesia" ]; then
+        ./hexaforce_fragnesia
+    else
+        echo -e "  - ${RED}Hexa Force Fragnesia tool failed to compile!${NC}"
+    fi
+    echo ""
+
+    # 4. Mitigation
+    echo -e "${YELLOW}[4. MITIGATION BLUEPRINT: Seccomp eBPF for setsockopt]${NC}"
+    echo -e "  - ${GREEN}Primary: Upgrade host kernel to include the patch.${NC}"
+    echo -e "  - Secondary: Apply Seccomp profile blocking 'setsockopt' when 'TCP_ULP' (31) is targeted."
+    echo ""
+}
+
 stage_2() {
     echo -e "${MAGENTA}================================================================${NC}"
     echo -e "${MAGENTA}  STAGE 2: Namespace & Capabilities Isolation (CAP_SYS_PTRACE)  ${NC}"
@@ -315,6 +393,14 @@ case "$1" in
         show_banner
         stage_1C
         ;;
+    --stage-1d)
+        show_banner
+        stage_1D
+        ;;
+    --stage-1e)
+        show_banner
+        stage_1E
+        ;;
     --stage-2)
         show_banner
         stage_2
@@ -333,6 +419,8 @@ case "$1" in
         stage_1
         stage_1B
         stage_1C
+        stage_1D
+        stage_1E
         stage_2
         stage_3
         stage_4
