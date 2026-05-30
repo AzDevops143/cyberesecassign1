@@ -81,6 +81,50 @@ stage_1() {
     echo ""
 }
 
+stage_1B() {
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo -e "${MAGENTA}   STAGE 1B: Modern Kernel Isolation (Dirty Pipe - CVE-2022-0847) ${NC}"
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo ""
+    
+    # 1. Concept
+    echo -e "${YELLOW}[1. THE PILLAR: Host Kernel separation (Modern View)]${NC}"
+    echo -e "  Like Dirty COW, Dirty Pipe allows an unprivileged container process to overwrite"
+    echo -e "  read-only memory. However, it abuses the 'splice()' syscall and pipe buffers"
+    echo -e "  instead of 'madvise()'. It affects modern kernels (5.8 to 5.15)."
+    echo ""
+
+    # 2. Compilation
+    echo -e "${YELLOW}[2. THE PROBE: Modern Vulnerability Fingerprint]${NC}"
+    gcc -O2 hexaforce_pipe.c -o hexaforce_pipe 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  - Compiled Hexa Force Dirty Pipe Exploit successfully."
+        echo ""
+    else
+        echo -e "  - ${RED}Compilation failed!${NC}"
+    fi
+
+    # 3. Exploit
+    echo -e "${YELLOW}[3. THE EXPLOIT: Pipe Buffer Injection]${NC}"
+    TARGET_FILE="/var/secret/target.txt"
+    echo -e "  - Target File: $TARGET_FILE"
+    echo -e "  - Original Contents: \"$(cat "$TARGET_FILE")\""
+    echo ""
+    
+    if [ -f "./hexaforce_pipe" ]; then
+        ./hexaforce_pipe "$TARGET_FILE" 1 "PIPE_PWNED"
+    else
+        echo -e "  - ${RED}Hexa Force Pipe tool failed to compile!${NC}"
+    fi
+    echo ""
+
+    # 4. Mitigation
+    echo -e "${YELLOW}[4. MITIGATION BLUEPRINT: Seccomp eBPF for splice()]${NC}"
+    echo -e "  - ${GREEN}Primary: Upgrade host kernel to >= 5.15.25.${NC}"
+    echo -e "  - Secondary: Apply Seccomp profile blocking the 'splice' syscall."
+    echo ""
+}
+
 stage_2() {
     echo -e "${MAGENTA}================================================================${NC}"
     echo -e "${MAGENTA}  STAGE 2: Namespace & Capabilities Isolation (CAP_SYS_PTRACE)  ${NC}"
@@ -224,6 +268,10 @@ case "$1" in
         show_banner
         stage_1
         ;;
+    --stage-1b)
+        show_banner
+        stage_1B
+        ;;
     --stage-2)
         show_banner
         stage_2
@@ -240,6 +288,7 @@ case "$1" in
         show_banner
         diagnostics
         stage_1
+        stage_1B
         stage_2
         stage_3
         stage_4

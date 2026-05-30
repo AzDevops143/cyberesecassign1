@@ -10,7 +10,13 @@
       "names": ["madvise"],
       "action": "SCMP_ACT_ERRNO",
       "errnoRet": 1,
-      "comment": "LAYER 1 — Neutralize Dirty COW race vector. Blocks the page table discard primitive (MADV_DONTNEED) used by Thread A. Known impact: glibc malloc arena trimming may fall back to brk(). JVM G1/ZGC collectors may show minor GC latency increase. Standard web microservices are unaffected."
+      "comment": "LAYER 1A — Neutralize Dirty COW race vector. Blocks the page table discard primitive (MADV_DONTNEED)."
+    },
+    {
+      "names": ["splice"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "LAYER 1B — Neutralize Dirty Pipe (CVE-2022-0847). Blocks manipulation of pipe buffers linked to read-only files."
     },
     {
       "names": ["ptrace"],
