@@ -5,7 +5,7 @@ Sequence diagrams are used to illustrate the precise chronological order of syst
 
 ---
 
-## 🏛️ Architectural Primitives
+##   Architectural Primitives
 Before reviewing the stages, it is critical to understand the boundaries of the environment:
 *   **Unprivileged Container:** A heavily restricted process space (Namespaces) isolated from the rest of the system.
 *   **Host Kernel:** The core operating system layer shared by *all* containers. If the kernel is compromised, all containers and the host are compromised.
