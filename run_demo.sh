@@ -125,6 +125,45 @@ stage_1B() {
     echo ""
 }
 
+stage_1C() {
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo -e "${MAGENTA}  STAGE 1C: Cryptographic Kernel Isolation (Copy Fail CVE-2026-31431) ${NC}"
+    echo -e "${MAGENTA}================================================================${NC}"
+    echo ""
+    
+    # 1. Concept
+    echo -e "${YELLOW}[1. THE PILLAR: Kernel Crypto API (AF_ALG) separation]${NC}"
+    echo -e "  Copy Fail (2026) is a logic flaw in the AF_ALG userspace crypto API."
+    echo -e "  By opening an AF_ALG socket and binding to the 'algif_aead' module,"
+    echo -e "  an attacker can corrupt the page cache of readable files."
+    echo ""
+
+    # 2. Compilation
+    echo -e "${YELLOW}[2. THE PROBE: AF_ALG Vulnerability Fingerprint]${NC}"
+    gcc -O2 hexaforce_copyfail.c -o hexaforce_copyfail 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  - Compiled Hexa Force Copy Fail Structural Exploit successfully."
+        echo ""
+    else
+        echo -e "  - ${RED}Compilation failed!${NC}"
+    fi
+
+    # 3. Exploit
+    echo -e "${YELLOW}[3. THE EXPLOIT: AF_ALG Socket Binding]${NC}"
+    if [ -f "./hexaforce_copyfail" ]; then
+        ./hexaforce_copyfail
+    else
+        echo -e "  - ${RED}Hexa Force Copy Fail tool failed to compile!${NC}"
+    fi
+    echo ""
+
+    # 4. Mitigation
+    echo -e "${YELLOW}[4. MITIGATION BLUEPRINT: Seccomp eBPF for AF_ALG]${NC}"
+    echo -e "  - ${GREEN}Primary: Upgrade host kernel to include the 'a664bf3d603d' patch.${NC}"
+    echo -e "  - Secondary: Apply Seccomp profile blocking 'socket' syscalls for the AF_ALG domain."
+    echo ""
+}
+
 stage_2() {
     echo -e "${MAGENTA}================================================================${NC}"
     echo -e "${MAGENTA}  STAGE 2: Namespace & Capabilities Isolation (CAP_SYS_PTRACE)  ${NC}"
@@ -272,6 +311,10 @@ case "$1" in
         show_banner
         stage_1B
         ;;
+    --stage-1c)
+        show_banner
+        stage_1C
+        ;;
     --stage-2)
         show_banner
         stage_2
@@ -289,6 +332,7 @@ case "$1" in
         diagnostics
         stage_1
         stage_1B
+        stage_1C
         stage_2
         stage_3
         stage_4

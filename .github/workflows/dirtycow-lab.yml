@@ -84,6 +84,16 @@ jobs:
         IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
         docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1b
 
+  test-copy-fail:
+    name: Stage 1C - Copy Fail
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run Crypto Kernel Escape (CVE-2026-31431)
+      run: |
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1c
+
   test-capabilities:
     name: Stage 2 - Capabilities
     needs: build-and-sign

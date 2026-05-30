@@ -19,6 +19,19 @@
       "comment": "LAYER 1B — Neutralize Dirty Pipe (CVE-2022-0847). Blocks manipulation of pipe buffers linked to read-only files."
     },
     {
+      "names": ["socket"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "args": [
+        {
+          "index": 0,
+          "value": 38,
+          "op": "SCMP_CMP_EQ"
+        }
+      ],
+      "comment": "LAYER 1C — Neutralize Copy Fail (CVE-2026-31431). Blocks creation of AF_ALG (38) userspace crypto sockets."
+    },
+    {
       "names": ["ptrace"],
       "action": "SCMP_ACT_ERRNO",
       "errnoRet": 1,
