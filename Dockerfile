@@ -51,8 +51,9 @@ COPY hexaforce_fragnesia.c /home/victim/hexaforce_fragnesia.c
 COPY run_demo.sh /home/victim/run_demo.sh
 COPY benchmark.sh /home/victim/benchmark.sh
 
-# Set ownership and executable permissions
+# Set ownership, fix Windows CRLF line endings, and set executable permissions
 RUN chown -R victim:victim /home/victim && \
+    sed -i 's/\r$//' /home/victim/run_demo.sh /home/victim/benchmark.sh && \
     chmod +x /home/victim/run_demo.sh /home/victim/benchmark.sh
 
 # Switch to the low-privileged user environment
