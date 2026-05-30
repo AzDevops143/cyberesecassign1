@@ -19,9 +19,11 @@
 
 Hexa Force is an **educational integration study and instrumented containment framework** designed for shared-kernel container environments. It models a complete four-stage container breakout exploit chain and demonstrates the efficacy of multi-layered defense mechanisms, including surgical system call filtering (Seccomp BPF) and kernel capability dropping.
 
+### Environment & Threat Model Justification
+> *"To explain the modern **Dirty Pipe (CVE-2022-0847)** and classic **Dirty COW (CVE-2016-5195)** container escapes, this lab uses an **Ubuntu 20.04** container environment. The theoretical threat model assumes a vulnerable underlying host kernel (such as the Linux `5.15` series prior to `5.15.25` for Dirty Pipe, or `< 4.8.3` for Dirty COW). By demonstrating these exploits, we prove that our Hexa Force architecture can physically trap an attacker inside a container, even if the underlying bare-metal host is running a critically vulnerable kernel."*
+
 This repository accompanies the IEEE-format research paper:  
 >  *"Securing Shared-Kernel Runtimes Against Kernel-Level Container Escapes."*
-
 ---
 
 ##  The 4-Stage Threat Model
