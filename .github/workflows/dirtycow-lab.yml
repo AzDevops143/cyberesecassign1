@@ -8,27 +8,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-sign-run:
+  build-and-sign:
+    name: Build & Sign Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write      # Required to push image and signature to GHCR
-      id-token: write      # Required for OIDC keyless signing (Sigstore/Cosign)
+      packages: write
+      id-token: write
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # Step 0: Set lowercase repository name for Docker/GHCR compliance
     - name: Set lowercase repository name
-      run: |
-        echo "IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+      run: echo "IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
-    # Step 1: Install Cosign (Sigstore)
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3.5.0
 
-    # Step 2: Log in to GitHub Container Registry (GHCR)
     - name: Log in to GHCR
       uses: docker/login-action@v3
       with:
@@ -36,8 +33,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # Step 3: Build Docker Image Locally (for scanning)
-    - name: Build Docker Image Locally
+    - name: Build and Scan Locally
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -45,18 +41,16 @@ jobs:
         load: true
         tags: ${{ env.IMAGE_TAG }}:temp-scan
 
-    # Step 3.5: Run AquaSec Trivy Vulnerability Scanner
     - name: Run Trivy Vulnerability Scanner
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ${{ env.IMAGE_TAG }}:temp-scan
         format: 'table'
-        exit-code: '0'       # Report vulnerabilities without blocking builds since we're analyzing a lab exploit environment
+        exit-code: '0'
         ignore-unfixed: true
         severity: 'CRITICAL,HIGH'
 
-    # Step 3.8: Push Docker Image to GHCR
-    - name: Push Docker Image to GHCR
+    - name: Push to GHCR
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -65,30 +59,57 @@ jobs:
           ${{ env.IMAGE_TAG }}:latest
           ${{ env.IMAGE_TAG }}:${{ github.sha }}
 
-    # Step 4: Sign the Published Image keylessly
-    - name: Sign the Published Image
+    - name: Sign Image
       env:
         TAGS: ${{ env.IMAGE_TAG }}:${{ github.sha }}
-      run: |
-        cosign sign --yes "${TAGS}"
+      run: cosign sign --yes "${TAGS}"
 
-    # Step 5: Run your Hexa Force Lab Stages using the Signed Image
-    - name: "Run Stage 1: Host Kernel Isolation (Dirty COW Exploit)"
+  test-dirty-cow:
+    name: Stage 1 - Dirty COW
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run Container Escape (CVE-2016-5195)
       run: |
-        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-1
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1
 
-    - name: "Run Stage 1B: Modern Kernel Isolation (Dirty Pipe Exploit)"
+  test-dirty-pipe:
+    name: Stage 1B - Dirty Pipe
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run Modern Kernel Escape (CVE-2022-0847)
       run: |
-        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-1b
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-1b
 
-    - name: "Run Stage 2: Namespace & Capabilities Isolation"
+  test-capabilities:
+    name: Stage 2 - Capabilities
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run Process Injection Test
       run: |
-        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-2
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-2
 
-    - name: "Run Stage 3: Daemon & API Security"
+  test-socket-api:
+    name: Stage 3 - Daemon API
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run API Hijack Test
       run: |
-        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-3
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-3
 
-    - name: "Run Stage 4: Volume & Filesystem Security"
+  test-filesystem:
+    name: Stage 4 - Persistent Mounts
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run Host Filesystem Pivot Test
       run: |
-        docker run --rm ${{ env.IMAGE_TAG }}:latest /bin/bash run_demo.sh --stage-4
+        IMAGE_TAG=ghcr.io/${GITHUB_REPOSITORY,,}
+        docker run --rm ${IMAGE_TAG}:latest /bin/bash run_demo.sh --stage-4
